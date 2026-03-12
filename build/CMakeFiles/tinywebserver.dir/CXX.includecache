@@ -6,17 +6,27 @@
 
 #IncludeRegexTransform: 
 
-/home/qianzhu/test/tinywebserver/src/server_t1.cpp
+/home/qianzhu/test/tinywebserver/src/main.cpp
 iostream
 -
-sys/socket.h
--
 arpa/inet.h
+-
+sys/socket.h
 -
 unistd.h
 -
 netinet/in.h
 -
 cstring
+-
+fstream
+-
+sstream
+-
+string
+-
+cerrno
+-
+cstdio
 -
 

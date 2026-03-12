@@ -14,7 +14,7 @@ message("项目目录：${CMAKE_SOURCE_DIR}")
 
 #添加可执行文件按
 add_executable(tinywebserver
-src/server_t1.cpp
+src/main.cpp
 )
 
 #设置输出目录

@@ -123,32 +123,32 @@ tinywebserver/fast:
 	$(MAKE) -f CMakeFiles/tinywebserver.dir/build.make CMakeFiles/tinywebserver.dir/build
 .PHONY : tinywebserver/fast
 
-src/server_t1.o: src/server_t1.cpp.o
+src/main.o: src/main.cpp.o
 
-.PHONY : src/server_t1.o
+.PHONY : src/main.o
 
 # target to build an object file
-src/server_t1.cpp.o:
-	$(MAKE) -f CMakeFiles/tinywebserver.dir/build.make CMakeFiles/tinywebserver.dir/src/server_t1.cpp.o
-.PHONY : src/server_t1.cpp.o
+src/main.cpp.o:
+	$(MAKE) -f CMakeFiles/tinywebserver.dir/build.make CMakeFiles/tinywebserver.dir/src/main.cpp.o
+.PHONY : src/main.cpp.o
 
-src/server_t1.i: src/server_t1.cpp.i
+src/main.i: src/main.cpp.i
 
-.PHONY : src/server_t1.i
+.PHONY : src/main.i
 
 # target to preprocess a source file
-src/server_t1.cpp.i:
-	$(MAKE) -f CMakeFiles/tinywebserver.dir/build.make CMakeFiles/tinywebserver.dir/src/server_t1.cpp.i
-.PHONY : src/server_t1.cpp.i
+src/main.cpp.i:
+	$(MAKE) -f CMakeFiles/tinywebserver.dir/build.make CMakeFiles/tinywebserver.dir/src/main.cpp.i
+.PHONY : src/main.cpp.i
 
-src/server_t1.s: src/server_t1.cpp.s
+src/main.s: src/main.cpp.s
 
-.PHONY : src/server_t1.s
+.PHONY : src/main.s
 
 # target to generate assembly for a file
-src/server_t1.cpp.s:
-	$(MAKE) -f CMakeFiles/tinywebserver.dir/build.make CMakeFiles/tinywebserver.dir/src/server_t1.cpp.s
-.PHONY : src/server_t1.cpp.s
+src/main.cpp.s:
+	$(MAKE) -f CMakeFiles/tinywebserver.dir/build.make CMakeFiles/tinywebserver.dir/src/main.cpp.s
+.PHONY : src/main.cpp.s
 
 # Help Target
 help:
@@ -159,9 +159,9 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... tinywebserver"
-	@echo "... src/server_t1.o"
-	@echo "... src/server_t1.i"
-	@echo "... src/server_t1.s"
+	@echo "... src/main.o"
+	@echo "... src/main.i"
+	@echo "... src/main.s"
 .PHONY : help
 
 

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>我的第一个Web服务器</title>
+     <!-- 5. 样式标签：开始写CSS（控制网页外观） -->
+    <style>
+         /* 6. 全局选择器：选择所有元素 */
+        *{  
+            margin: 0;   /* 外边距：元素与其他元素的间距 */
+            padding: 0; /* 内边距：元素内容与边框的间距 */
+            box-sizing: border-box; /* 盒子模型：让宽度包含边框和内边距 */
+        }
+
+        /*7.body标签：网页主体，所有可见内容都在这里*/
+        body{
+            font-family: 'Arial', sans-serif;  /* 字体：优先用Arial，没有就用sans-serif */
+            line-height: 1.6;   /* 行高：1.6倍行距，阅读更舒适 */
+            background: lineaer-gradient(135deg, #667eea 0%, #764ba2 100%); /* 背景：蓝紫色渐变 */
+            min-height: 100vh;  /* 最小高度：100%视口高度，至少占满整个屏幕 */
+            display: flex;       /* 布局：使用弹性盒子（Flexbox） */
+            justify-content: center;    /* 水平居中：子元素在水平方向居中 */
+            align-items: center;    /* 垂直居中：子元素在垂直方向居中 */
+            padding: 20px;  /* 内边距：body内容距离浏览器边缘20像素 */
+        }
+
+         /* 8. 容器类：白色卡片，包含所有内容 */
+         .container{
+            background: white;  /* 背景色：白色 */
+            border-radius:20px; /* 圆角：20像素圆角 */
+            box-shadow:  0 20px 40px rgba(0,0,0,0.1); /* 阴影：水平偏移0，垂直偏移20，模糊40，黑色10%透明度 */
+            padding:  40px; /* 内边距：内容距离容器边缘40像素 */
+            max-width: 600px; /* 最大宽度：不超过600像素 */
+            text-align: center;              /* 文本对齐：居中 */
+        }
+
+        /* 9. 表情类：显示🚀火箭 */
+        .emoji{
+            font-size: 3em;   /* 字体大小：3倍基本字体大小 */
+            margin-bottom: 20px;     /* 下边距：底部留20像素空白 */
+        }
+
+        /* 10. 状态标签：显示服务器状态 */
+        .status{
+            background: #4CAF50;             /* 背景色：绿色 */
+            color: while;     /* 文字颜色：白色 */
+            padding: 10px 20px;              /* 内边距：上下10像素，左右20像素 */
+            border-radius: 50px;             /* 圆角：50像素（变成椭圆形） */
+            display: inline-block;  /* 显示方式：行内块，可以设置宽高 */
+            margin: 20px 0; /* 外边距：上下20像素，左右0 */
+            font-weight: bold;               /* 字体粗细：粗体 */
+        }
+
+         /* 11. 信息框：灰色背景的信息区域 */
+         .info-box{
+            background:  #f5f5f5;             /* 背景色：浅灰色 */
+            border-radius: 10px;     /* 圆角：10像素 */
+            padding: 20px;   /* 内边距：20像素 */
+            margin: 20px 0;                  /* 外边距：上下20像素 */
+            text-align: left;    /* 文本对齐：左对齐 */
+         }
+
+            /* 12. 信息框内的小标题 */
+        .info-box h3{
+            color:  #666;                     /* 文字颜色：深灰色 */
+            margin-bottom: 10px;    /* 下边距：底部留10像素空白 */
+        }  
+         /* 13. 链接区域：包含所有按钮链接 */
+         .links{
+            margin-top: 30px;   /* 上边距：顶部留30像素空白 */
+         }
+
+          /* 14. 链接按钮样式 */
+          .links a{
+            display: inline-block;   /* 显示方式：行内块，可以设置宽高 */
+            margin: 0 10px;     /* 外边距：上下0，左右10像素 */
+            padding: 10px 20px; /* 内边距：上下10像素，左右20像素 */
+            background: #667eea;             /* 背景色：蓝色 */
+            color: white;    /* 文字颜色：白色 */
+            text-decoration: none;   /* 文本装饰：去掉下划线 */
+            border-radius: 5px;  /* 圆角：5像素 */
+            transition: transform 0.2s;      /* 过渡效果：变换属性0.2秒动画 */
+          }
+
+           /* 15. 鼠标悬停时链接按钮的效果 */
+           .links a:hover{
+            transform: translateY(-2px);         /* 变换：向上移动2像素 */
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1); /* 阴影：轻微阴影效果 */
+           }
+
+           /* 16. 页脚样式 */
+           .footer{
+            margin-top: 30px;                /* 上边距：顶部留30像素空白 */
+            color: #666;                     /* 文字颜色：深灰色 */
+            font-size: 0.9em;                /* 字体大小：0.9倍基本字体大小 */
+           }
+        </style>
+    <!-- 17. 头部结束 -->
+</head>   
+
+<!-- 18. 身体：网页可见内容从这里开始 -->
+ <body>
+    <!-- 19. 主容器：应用.container样式 -->
+    <div class="container">
+        <!-- 20. 表情：应用.emoji样式 -->
+        <div class="emoji">🚀</div>
+
+         <!-- 21. 一级标题：最大的标题 -->
+        <h1>Web服务器运行成功！</h1>
+
+        <!-- 22. 状态标签：应用.status样式 -->
+        <div class="status">✅ 服务器状态：运行中</div>
+        <!-- 23. 信息框：应用.info-box样式 -->
+        <div class="info-box">
+            <!-- 24. 三级标题：比h1小的标题 -->
+            <h3>服务器信息</h3>
+            <!-- 25. 段落1：<p>表示段落 -->
+            <p>
+                <!-- 26. 加粗文本：<strong>会让文字加粗 -->
+                <strong>技术栈：</strong>C++ 11, POSIX Socket, HTTP/1.1
+            </p>
+
+            <!-- 27. 段落2 -->
+            <p><strong>端口：</strong>8080</p>
+            <!-- 28. 段落3 -->
+            <p><strong>开发者：</strong>你自己！</p>
+        </div>
+
+        <!-- 29. 链接区域：应用.links样式 -->
+        <div class="links">
+            <!-- 30. 链接1：href属性指定点击后跳转的地址 -->
+            <a href="/test.html">📄 测试页面</a>
+            <!-- 31. 链接2 -->
+            <a href="/api/hello">🔗 API测试</a>
+            <!-- 32. 链接3 -->
+            <a href="/nonexist">❌ 404测试</a>
+        </div>
+
+        <!-- 33. 页脚：应用.footer样式 -->
+        <div class="footer">
+            <!-- 34. 说明段落 -->
+            <p>这是一个用C++从零开始编写的Web服务器</p>
+
+            <!-- 35. 时间显示：id属性给这个元素一个唯一标识 -->
+            <p id="time">
+                加载时间：<span id="current-time"></span>  <!-- 36. 这个span会被JavaScript修改 -->
+            </p>
+        </div>
+    </div>
+
+    <!-- 37. JavaScript脚本：让网页有交互功能 -->
+
+    <script>
+         // 38. 定义函数：更新时间的函数
+         function updateTime() {
+            // 39. 创建当前时间对象
+            const now = new Date();
+            
+            // 40. 找到id为"current-time"的元素，设置它的文本内容
+            document.getElementById('current-time').textContent = 
+                // 41. 将时间格式化为中文格式
+                now.toLocaleString('zh-CN', { 
+                    year: 'numeric',     // 年份：2025
+                    month: '2-digit',    // 月份：03（两位数字）
+                    day: '2-digit',      // 日期：10
+                    hour: '2-digit',     // 小时：14
+                    minute: '2-digit',   // 分钟：30
+                    second: '2-digit'    // 秒：45
+                });
+        }
+
+        // 42. 立即调用一次，显示当前时间
+        updateTime();
+
+        // 43. 设置定时器：每1000毫秒（1秒）调用一次updateTime函数
+        setInterval(updateTime, 1000);
+    </script>
+
+<!-- 44. 身体结束 -->
+</body>
+<!-- 45. HTML文档结束 -->
+</html>

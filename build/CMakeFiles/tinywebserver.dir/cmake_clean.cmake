@@ -1,5 +1,5 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/tinywebserver.dir/src/server_t1.cpp.o"
+  "CMakeFiles/tinywebserver.dir/src/main.cpp.o"
   "bin/tinywebserver"
   "bin/tinywebserver.pdb"
 )
