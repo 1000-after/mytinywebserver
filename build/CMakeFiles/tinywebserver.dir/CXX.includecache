@@ -6,6 +6,10 @@
 
 #IncludeRegexTransform: 
 
+../include/simple_logger.h
+string
+-
+
 /home/qianzhu/test/tinywebserver/src/main.cpp
 iostream
 -
@@ -28,5 +32,19 @@ string
 cerrno
 -
 cstdio
+-
+simple_logger.h
+/home/qianzhu/test/tinywebserver/src/simple_logger.h
+
+/home/qianzhu/test/tinywebserver/src/simple_logger.cpp
+simple_logger.h
+/home/qianzhu/test/tinywebserver/src/simple_logger.h
+iostream
+-
+fstream
+-
+ctime
+-
+iomanip
 -
 

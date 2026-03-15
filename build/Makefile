@@ -150,6 +150,33 @@ src/main.cpp.s:
 	$(MAKE) -f CMakeFiles/tinywebserver.dir/build.make CMakeFiles/tinywebserver.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
+src/simple_logger.o: src/simple_logger.cpp.o
+
+.PHONY : src/simple_logger.o
+
+# target to build an object file
+src/simple_logger.cpp.o:
+	$(MAKE) -f CMakeFiles/tinywebserver.dir/build.make CMakeFiles/tinywebserver.dir/src/simple_logger.cpp.o
+.PHONY : src/simple_logger.cpp.o
+
+src/simple_logger.i: src/simple_logger.cpp.i
+
+.PHONY : src/simple_logger.i
+
+# target to preprocess a source file
+src/simple_logger.cpp.i:
+	$(MAKE) -f CMakeFiles/tinywebserver.dir/build.make CMakeFiles/tinywebserver.dir/src/simple_logger.cpp.i
+.PHONY : src/simple_logger.cpp.i
+
+src/simple_logger.s: src/simple_logger.cpp.s
+
+.PHONY : src/simple_logger.s
+
+# target to generate assembly for a file
+src/simple_logger.cpp.s:
+	$(MAKE) -f CMakeFiles/tinywebserver.dir/build.make CMakeFiles/tinywebserver.dir/src/simple_logger.cpp.s
+.PHONY : src/simple_logger.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -162,6 +189,9 @@ help:
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... src/simple_logger.o"
+	@echo "... src/simple_logger.i"
+	@echo "... src/simple_logger.s"
 .PHONY : help
 
 

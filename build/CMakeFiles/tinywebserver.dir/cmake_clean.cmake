@@ -1,5 +1,6 @@
 file(REMOVE_RECURSE
   "CMakeFiles/tinywebserver.dir/src/main.cpp.o"
+  "CMakeFiles/tinywebserver.dir/src/simple_logger.cpp.o"
   "bin/tinywebserver"
   "bin/tinywebserver.pdb"
 )

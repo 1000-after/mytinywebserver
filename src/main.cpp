@@ -10,6 +10,9 @@
 #include <cerrno>   //系统错误码(errno),获取调用失败原因
 #include <cstdio>   //辅助错误打印
 
+//包含日志头文件
+#include "simple_logger.h"
+
 using namespace std;
 
 // 函数声明（先声明后使用，避免编译报错）
@@ -29,17 +32,24 @@ string buildResponse(const string& content, const string& contentType = "text/ht
 // 返回：完整的HTTP错误响应字符串
 string buildErrorResponse(int code, const string& message, const string& errorContent=" ");
 
+
+//全局日志对象
+SimpleLogger logger(INFO, true);    //INFO级别,启用文件日志
+
 // 主函数（程序入口）
 int main()
 {
+        logger.info("🚀 启动Web服务器...");
         // ===================== 第一步：创建套接字（类比“装电话机”） =====================
-         cout << "创建电话机" << endl;
+        //cout << "创建电话机" << endl;
+        logger.info("创建电话机");
     // socket()：创建TCP套接字
     // 参数1：AF_INET - IPv4协议；参数2：SOCK_STREAM - TCP协议；参数3：0 - 默认协议（TCP）
     int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if(server_fd < 0){  // 检查套接字创建是否失败
         // strerror(errno)：把系统错误码转成人类可读的字符串（如"Permission denied"）
-        cout << "电话机创建失败: " << strerror(errno) << endl;
+        //cout << "电话机创建失败: " << strerror(errno) << endl;
+        logger.error("电话机创建失败: " + string(strerror(errno)));
         close(server_fd);  // 释放无效资源（即使失败也要尝试关闭）
         return 1;  // 程序异常退出（非0表示出错）
     }
@@ -52,7 +62,8 @@ int main()
     // 参数3：SO_REUSEADDR|SO_REUSEPORT - 允许复用地址/端口；
     // 参数4：&opt - 选项值地址；参数5：sizeof(opt) - 选项长度
     if(setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt , sizeof(opt)) < 0){
-                cout << "设置套接字选项失败: " << strerror(errno) << endl;
+                //cout << "设置套接字选项失败: " << strerror(errno) << endl;
+        logger.error("设置套接字选项失败: " + string(strerror(errno)));
         close(server_fd);  // 释放资源
         return 1;  // 异常退出
     }
@@ -67,14 +78,16 @@ int main()
 // htons()：主机字节序转网络字节序（CPU小端序 → 网络大端序）
     address.sin_port = htons(8080); // 监听8080端口
 
-    cout << "📡 电话号码设置为8080" << endl;
+    //cout << "📡 电话号码设置为8080" << endl;
+    logger.info("📡 电话号码设置为8080");
 
     // ===================== 第四步：绑定套接字（类比“把号码绑定到电话机”） =====================
     // bind()：把地址+端口绑定到套接字
     // 参数1：server_fd - 套接字；参数2：(struct sockaddr*)&address - 通用地址结构体（强制转换）；
     // 参数3：sizeof(address) - 地址结构体长度
     if(bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0 ){
-         cout << "❌ 绑定电话号码失败: " << strerror(errno) << endl;
+        //cout << "❌ 绑定电话号码失败: " << strerror(errno) << endl;
+        logger.error("绑定电话号码失败: " + string(strerror(errno)));
         close(server_fd);  // 释放资源
         return 1;  // 异常退出
     }
@@ -83,19 +96,23 @@ int main()
     // listen()：开始监听端口
     // 参数1：server_fd - 套接字；参数2：3 - 最大等待队列长度（最多3个待处理连接）
     if(listen(server_fd, 3) < 0){
-        cout << "❌ 监听失败: " << strerror(errno) << endl;
+        //cout << "❌ 监听失败: " << strerror(errno) << endl;
+        logger.error("监听失败: " + string(strerror(errno)));
         close(server_fd);  // 释放资源
         return 1;  // 异常退出
     }
 
-    cout << "🔔 电话已开启响铃，等待来电..." << endl;
-    cout << "🌐 请访问: http://localhost:8080/" << endl;
+    // cout << "🔔 电话已开启响铃，等待来电..." << endl;
+    // cout << "🌐 请访问: http://localhost:8080/" << endl;
+    logger.info("🔔 电话已开启响铃，等待来电...");
+    logger.info("🌐 请访问: http://localhost:8080/");
 
     // ===================== 第六步：循环处理客户端请求（核心循环） =====================
     // while(true)：无限循环，一直处理请求（直到手动终止程序）
 
     while(true){
-     cout << "\n⏳ 等待客户连接..." << endl;
+        //cout << "\n⏳ 等待客户连接..." << endl;
+        logger.info("⏳ 等待客户连接...");
 
         // 存储客户端的IP+端口信息
         struct sockaddr_in client_addr;
@@ -108,7 +125,8 @@ int main()
         // 返回值：client_fd - 客户端连接描述符（每个客户端独立）
         int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
         if(client_fd < 0){   // 检查连接是否接受失败
-            cout << "❌ 接电话失败: " << strerror(errno) << endl;
+            //cout << "❌ 接电话失败: " << strerror(errno) << endl;
+            logger.warning("接电话失败: " + string(strerror(errno)));
             continue;  // 跳过本次循环，继续等待下一个连接
         }
 
@@ -121,9 +139,12 @@ int main()
         int client_port = ntohs(client_addr.sin_port);
 
 
-        cout << "📞 接到一个电话" << endl;
-        cout << "   📍 客户端IP: " << client_ip << ":" << client_port << endl;
-        cout << "   #️⃣ 客户端编号: " << client_fd << endl;
+        // cout << "📞 接到一个电话" << endl;
+        // cout << "   📍 客户端IP: " << client_ip << ":" << client_port << endl;
+        // cout << "   #️⃣ 客户端编号: " << client_fd << endl;
+        logger.info("📞 接到一个电话");
+        logger.debug("   📍 客户端IP: " + string(client_ip) + ":" + to_string(client_port));
+        logger.debug("   #️⃣ 客户端编号: " + to_string(client_fd));
 
         // ===================== 读取客户端的HTTP请求 =====================
         // 定义请求缓冲区（4096字节，足够存普通HTTP请求），初始化为0
@@ -137,11 +158,20 @@ int main()
 
         // ===================== 处理读取结果（分支逻辑） =====================
         if(bytes_read > 0){ // 读取到有效数据
-            cout << "📨 客户端请求:" << endl;
-            cout << "--------------------------------" << endl;
-            cout << buffer;  // 打印完整的HTTP请求（如GET /test.html HTTP/1.1）
-            cout << "--------------------------------" << endl;
-        
+            // cout << "📨 客户端请求:" << endl;
+            // cout << "--------------------------------" << endl;
+            // cout << buffer;  // 打印完整的HTTP请求（如GET /test.html HTTP/1.1）
+            // cout << "--------------------------------" << endl;
+            logger.debug("📨 客户端请求:");
+            logger.debug("--------------------------------");
+            // 只打印前200个字符，避免日志太长
+            string request_preview(buffer);
+            if (request_preview.length() > 200) {
+                request_preview = request_preview.substr(0, 200) + "...";
+            }
+            logger.debug(request_preview);
+            logger.debug("--------------------------------");
+
                     // ===================== 解析HTTP请求路径 =====================
             // 把C风格字符串转成C++ string，方便操作
             string request(buffer);
@@ -166,10 +196,12 @@ int main()
             size_t query_pos = path.find('?');
             if(query_pos != string::npos){
                 path = path.substr(0, query_pos);   //截断路径
-              cout << "🔧 截断查询参数后路径: " << path << endl;
+                //cout << "🔧 截断查询参数后路径: " << path << endl;
+                logger.debug("🔧 截断查询参数后路径: " + path);
             }
 
-            cout << "📍 请求路径: " << path << endl;
+            //cout << "📍 请求路径: " << path << endl;
+            logger.info("📍 请求路径: " + path);
             // ===================== 拼接文件绝对路径 =====================
             // ！！！替换为你的实际文件根目录绝对路径！！！
             // 示例："/home/你的用户名/test/tinywebserver/www"
@@ -181,7 +213,8 @@ int main()
                 filepath = base_path + "/index.html";  // 默认访问首页index.html
             }
 
-            cout << "📁 尝试打开文件: " << filepath << endl;
+            //cout << "📁 尝试打开文件: " << filepath << endl;
+            logger.debug("📁 尝试打开文件: " + filepath);
                       // ===================== 读取文件内容 =====================
             // 调用readFile函数，读取文件内容
             string content = readFile(filepath);
@@ -190,13 +223,15 @@ int main()
             if(!content.empty()){ // 文件读取成功（content非空）
                 // 构建200 OK响应
                 response = buildResponse(content);
-                cout << "✅ 文件读取成功 (" << content.length() << " 字节)" << endl;
+                //cout << "✅ 文件读取成功 (" << content.length() << " 字节)" << endl;
+                logger.info("✅ 文件读取成功 (" + to_string(content.length()) + " 字节)");
             }   else{ // 文件读取失败（不存在/权限不足）
                 // 构建404错误页面内容
                 string error_content = "<h1>404 Not Found</h1><p>请求的文件不存在: " + path + "</p>";
                 // 构建404 Not Found响应
                 response = buildErrorResponse(404, "Not Found", error_content);
-                 cout << "❌ 文件不存在，返回404" << endl;
+                //cout << "❌ 文件不存在，返回404" << endl;
+                logger.warning("❌ 文件不存在，返回404");
             }
 
                     // ===================== 发送响应给客户端 =====================
@@ -206,23 +241,30 @@ int main()
             // 返回值：send_len - 实际发送的字节数
             ssize_t send_len = write(client_fd, response.c_str(), response.length());
             if(send_len < 0){     // 发送失败
-                cout << "❌ 响应发送失败: " << strerror(errno) << endl;
+                //cout << "❌ 响应发送失败: " << strerror(errno) << endl;
+                logger.error("响应发送失败: " + string(strerror(errno)));
             } else{ // 发送成功
-                cout << "📤 发送响应 (" << send_len << " 字节)" << endl;
+                //cout << "📤 发送响应 (" << send_len << " 字节)" << endl;
+                logger.info("📤 发送响应 (" + to_string(send_len) + " 字节)");
+                
+                // 记录访问日志
+                string access_log = "访问日志: " + string(client_ip) + ":" + 
+                                   to_string(client_port) + " " + path + " -> " +
+                                   (content.empty() ? "404" : "200");
+                logger.info(access_log);
             }
         }else if(bytes_read == 0){  // 读取到0字节（客户端主动断开连接）
-            cout << "📭 客户端断开连接（无数据发送）" << endl;
+            //cout << "📭 客户端断开连接（无数据发送）" << endl;
+            logger.warning("📭 客户端什么都没说就挂了");
         } else {  // 读取失败（bytes_read < 0，如网络异常）
-            cout << "❌ 数据读取失败: " << strerror(errno) << endl;
+            //cout << "❌ 数据读取失败: " << strerror(errno) << endl;
+            logger.error("数据读取失败: " + string(strerror(errno)));
         }
 
         // ===================== 关闭客户端连接（释放资源） =====================
         close(client_fd);  // 关闭客户端连接描述符
-        cout << "✅ 电话挂断" << endl;
-
-
-
-
+        //cout << "✅ 电话挂断" << endl;
+        logger.info("✅ 电话挂断");
 
     }
 
@@ -237,7 +279,8 @@ string readFile(const string& filepath){
     // ifstream：C++文件输入流，ios::binary - 二进制模式（兼容图片/视频）
     ifstream file(filepath, ios::binary);
     if(!file.is_open()){ // 检查文件是否打开失败
-        cout << "📂 文件打开失败: " << filepath << " 原因: " << strerror(errno) << endl;
+        //cout << "📂 文件打开失败: " << filepath << " 原因: " << strerror(errno) << endl;
+        logger.error("📂 文件打开失败: " + filepath + " 原因: " + strerror(errno));
         return "";  // 返回空字符串，表示读取失败
     }
 
