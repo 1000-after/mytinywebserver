@@ -16,6 +16,8 @@ set(
     SOURCES
     src/main.cpp
     src/simple_logger.cpp
+    src/mime_types.cpp
+    src/config.cpp
 )
 #打印欢迎信息
 message("开始构建 TinyWebServer项目")

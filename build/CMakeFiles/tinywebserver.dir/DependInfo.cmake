@@ -4,7 +4,9 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
+  "/home/qianzhu/test/tinywebserver/src/config.cpp" "/home/qianzhu/test/tinywebserver/build/CMakeFiles/tinywebserver.dir/src/config.cpp.o"
   "/home/qianzhu/test/tinywebserver/src/main.cpp" "/home/qianzhu/test/tinywebserver/build/CMakeFiles/tinywebserver.dir/src/main.cpp.o"
+  "/home/qianzhu/test/tinywebserver/src/mime_types.cpp" "/home/qianzhu/test/tinywebserver/build/CMakeFiles/tinywebserver.dir/src/mime_types.cpp.o"
   "/home/qianzhu/test/tinywebserver/src/simple_logger.cpp" "/home/qianzhu/test/tinywebserver/build/CMakeFiles/tinywebserver.dir/src/simple_logger.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")

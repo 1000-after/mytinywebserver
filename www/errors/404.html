@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<!-- 1. HTML5文档类型声明 -->
+<html lang="zh-CN">
+<!-- 2. 根标签，lang="zh-CN"表示中文 -->
+<head>
+    <!-- 3. 头部：包含元信息和样式 -->
+    <meta charset="UTF-8">
+    <!-- 4. 字符编码：UTF-8支持中文 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 5. 视口设置：适配移动设备 -->
+    <title>404 - 页面未找到</title>
+    <!-- 6. 浏览器标签页标题 -->
+    
+    <style>
+        /* 7. 内部CSS样式：控制页面外观 */
+        
+        /* 8. 全局重置：清除所有元素的默认边距 */
+        * {
+            margin: 0;      /* 9. 外边距归零 */
+            padding: 0;     /* 10. 内边距归零 */
+            box-sizing: border-box;  /* 11. 盒子模型：宽度包含边框和内边距 */
+        }
+        /* 12. 整个页面的基础样式 */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* 13. 字体：优先用Segoe UI，没有就用后面的 */
+            
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            /* 14. 背景：135度渐变，从蓝色(#667eea)到紫色(#764ba2) */
+            
+            min-height: 100vh;  /* 15. 最小高度：100%视口高度，占满屏幕 */
+            display: flex;      /* 16. 使用弹性布局 */
+            justify-content: center;  /* 17. 水平居中 */
+            align-items: center;      /* 18. 垂直居中 */
+            padding: 20px;            /* 19. 内边距20像素 */
+            color: #333;              /* 20. 文字颜色：深灰色 */
+        }
+        
+        /* 21. 错误容器：白色卡片 */
+        .error-container {
+            background: rgba(255, 255, 255, 0.95);
+            /* 22. 背景：白色，95%透明度 */
+            
+            border-radius: 20px;  /* 23. 圆角20像素 */
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            /* 24. 阴影：水平偏移0，垂直偏移20，模糊40，黑色10%透明度 */
+            
+            padding: 50px;        /* 25. 内边距50像素 */
+            text-align: center;   /* 26. 文字居中 */
+            max-width: 600px;     /* 27. 最大宽度600像素 */
+            width: 100%;          /* 28. 宽度100%（在max-width限制内） */
+        }
+
+        /* 29. 错误表情样式 */
+        .error-emoji {
+            font-size: 5rem;      /* 30. 字体大小：5倍基本大小 */
+            margin-bottom: 20px;  /* 31. 下边距20像素 */
+            animation: bounce 2s infinite;  /* 32. 应用bounce动画，2秒一次，无限循环 */
+        }
+        /* 33. 定义bounce动画 */
+        @keyframes bounce {
+            0%, 100% { 
+                transform: translateY(0);  /* 34. 开始和结束：在原位置 */
+            }
+            50% { 
+                transform: translateY(-20px);  /* 35. 中间：向上移动20像素 */
+            }
+        }
+
+        /* 36. 错误代码样式（404数字） */
+        .error-code {
+            font-size: 6rem;      /* 37. 超大字体：6倍基本大小 */
+            font-weight: 800;     /* 38. 字重：很粗 */
+            color: #667eea;       /* 39. 颜色：蓝色 */
+            margin-bottom: 10px;  /* 40. 下边距10像素 */
+            line-height: 1;       /* 41. 行高：1（紧凑） */
+        }
+        
+        /* 42. 错误标题样式 */
+        .error-title {
+            font-size: 2rem;      /* 43. 字体大小：2倍基本大小 */
+            margin-bottom: 20px;  /* 44. 下边距20像素 */
+            color: #444;          /* 45. 颜色：灰色 */
+        }
+        
+        /* 46. 错误信息样式 */
+        .error-message {
+            font-size: 1.1rem;    /* 47. 字体大小：1.1倍 */
+            line-height: 1.6;     /* 48. 行高：1.6倍（舒适阅读） */
+            color: #666;          /* 49. 颜色：深灰色 */
+            margin-bottom: 30px;  /* 50. 下边距30像素 */
+        }
+        
+        /* 51. 请求路径显示框 */
+        .error-path {
+            background: #f8f9fa;  /* 52. 背景：浅灰色 */
+            padding: 10px 15px;   /* 53. 内边距：上下10，左右15 */
+            border-radius: 8px;   /* 54. 圆角8像素 */
+            font-family: 'Courier New', monospace;  /* 55. 等宽字体，像代码 */
+            color: #e74c3c;       /* 56. 颜色：红色 */
+            margin: 20px 0;       /* 57. 外边距：上下20像素 */
+            border-left: 4px solid #e74c3c;  /* 58. 左边框：4像素红色实线 */
+        }
+        
+        /* 59. 操作按钮容器 */
+        .action-buttons {
+            display: flex;        /* 60. 弹性布局 */
+            gap: 15px;            /* 61. 按钮间距15像素 */
+            justify-content: center;  /* 62. 水平居中 */
+            flex-wrap: wrap;      /* 63. 允许换行（小屏幕时） */
+            margin-top: 30px;     /* 64. 上边距30像素 */
+        }
+        
+        /* 65. 按钮基础样式 */
+        .btn {
+            padding: 12px 30px;   /* 66. 内边距：上下12，左右30 */
+            border-radius: 50px;  /* 67. 圆角50像素（椭圆形） */
+            text-decoration: none;  /* 68. 去掉下划线（链接默认有） */
+            font-weight: 600;     /* 69. 字重：粗体 */
+            transition: all 0.3s ease;  /* 70. 所有属性0.3秒缓动过渡 */
+            border: none;         /* 71. 无边框 */
+            cursor: pointer;      /* 72. 鼠标指针：手型 */
+            font-size: 1rem;      /* 73. 字体大小：基本大小 */
+        }
+        
+        /* 74. 主要按钮样式（绿色） */
+        .btn-primary {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            /* 75. 背景：绿色渐变 */
+            
+            color: white;         /* 76. 文字颜色：白色 */
+        }
+        
+        /* 77. 鼠标悬停时的主要按钮效果 */
+        .btn-primary:hover {
+            transform: translateY(-3px);  /* 78. 向上移动3像素 */
+            box-shadow: 0 10px 20px rgba(76, 175, 80, 0.2);
+            /* 79. 添加阴影：绿色20%透明度 */
+        }
+        
+        /* 80. 次要按钮样式（灰色） */
+        .btn-secondary {
+            background: #f8f9fa;  /* 81. 背景：浅灰色 */
+            color: #495057;       /* 82. 文字颜色：深灰色 */
+            border: 1px solid #dee2e6;  /* 83. 边框：1像素浅灰色 */
+        }
+        
+        /* 84. 鼠标悬停时的次要按钮效果 */
+        .btn-secondary:hover {
+            background: #e9ecef;  /* 85. 背景变深 */
+            transform: translateY(-3px);  /* 86. 向上移动3像素 */
+        }
+        
+        /* 87. 服务器信息区域 */
+        .server-info {
+            margin-top: 30px;     /* 88. 上边距30像素 */
+            padding-top: 20px;    /* 89. 上内边距20像素 */
+            border-top: 1px solid #eee;  /* 90. 上边框：1像素浅灰色 */
+            color: #888;          /* 91. 文字颜色：灰色 */
+            font-size: 0.9rem;    /* 92. 字体大小：0.9倍 */
+        }
+        
+        /* 93. 服务器信息中的强调文本 */
+        .server-info span {
+            color: #667eea;       /* 94. 颜色：蓝色 */
+            font-weight: 600;     /* 95. 字重：粗体 */
+        }
+        
+        /* 96. 媒体查询：小屏幕设备适配 */
+        @media (max-width: 600px) {
+            .error-container {
+                padding: 30px 20px;  /* 97. 小屏幕时减少内边距 */
+            }
+            
+            .error-code {
+                font-size: 4rem;  /* 98. 错误代码字体变小 */
+            }
+            
+            .error-title {
+                font-size: 1.5rem;  /* 99. 标题字体变小 */
+            }
+            
+            .action-buttons {
+                flex-direction: column;  /* 100. 按钮垂直排列 */
+            }
+            
+            .btn {
+                width: 100%;  /* 101. 按钮占满宽度 */
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 102. 页面可见内容开始 -->
+    <div class="error-container">
+        <!-- 103. 主容器 -->
+        <div class="error-emoji">🔍</div>
+        <!-- 104. 表情符号：放大镜 -->
+        
+        <h1 class="error-code">404</h1>
+        <!-- 105. 错误代码 -->
+        
+        <h2 class="error-title">页面迷路了</h2>
+        <!-- 106. 错误标题 -->
+        
+        <p class="error-message">
+            <!-- 107. 错误信息 -->
+            抱歉，您访问的页面不存在或已被移除。<br>
+            <!-- 108. 换行标签 -->
+            可能是URL输入错误，或者页面已被删除。
+        </p>
+        
+        <div class="error-path">
+            <!-- 109. 显示请求路径的区域 -->
+            请求路径: <span id="request-path">/index.html</span>
+            <!-- 110. span标签，id为request-path，会被JavaScript修改 -->
+        </div>
+        
+        <div class="action-buttons">
+            <!-- 111. 操作按钮区域 -->
+            <a href="/" class="btn btn-primary">🏠 返回首页</a>
+            <!-- 112. 返回首页按钮 -->
+            
+            <a href="javascript:history.back()" class="btn btn-secondary">↩️ 返回上一页</a>
+            <!-- 113. 返回上一页按钮，javascript:history.back()调用浏览器返回功能 -->
+            
+            <a href="mailto:admin@example.com" class="btn btn-secondary">📧 联系管理员</a>
+            <!-- 114. 联系管理员按钮，mailto:会打开邮件客户端 -->
+        </div>
+        
+        <div class="server-info">
+            <!-- 115. 服务器信息区域 -->
+            <p>服务器: <span>TinyWebServer/1.0</span> | 时间: <span id="current-time"></span></p>
+            <!-- 116. 显示服务器名称和当前时间 -->
+        </div>
+    </div>
+    
+    <!-- 117. JavaScript代码 -->
+    <script>
+        // 118. 显示请求的路径
+        const urlParams = new URLSearchParams(window.location.search);
+        // 119. URLSearchParams: 解析URL查询参数（如 ?path=/test.html）
+        
+        const path = urlParams.get('path') || window.location.pathname;
+        // 120. 获取path参数，如果没有就使用当前页面路径
+        
+        document.getElementById('request-path').textContent = path;
+        // 121. 找到id为request-path的元素，设置它的文本内容
+        
+        // 122. 显示当前时间
+        function updateTime() {
+            const now = new Date();  // 123. 创建Date对象，获取当前时间
+            
+            document.getElementById('current-time').textContent = 
+                // 124. 格式化时间为中文格式
+                now.toLocaleString('zh-CN', { 
+                    year: 'numeric',     // 125. 年：2025
+                    month: '2-digit',    // 126. 月：03
+                    day: '2-digit',      // 127. 日：10
+                    hour: '2-digit',     // 128. 时：14
+                    minute: '2-digit',   // 129. 分：30
+                    second: '2-digit'    // 130. 秒：45
+                });
+        }
+        
+        updateTime();  // 131. 立即调用一次
+        setInterval(updateTime, 1000);  // 132. 每1000毫秒（1秒）调用一次
+        
+        // 133. 添加一些互动效果
+        document.querySelector('.error-emoji').addEventListener('mouseenter', function() {
+            // 134. 鼠标进入表情区域时
+            this.style.transform = 'scale(1.2)';  // 135. 放大1.2倍
+        });
+        
+        document.querySelector('.error-emoji').addEventListener('mouseleave', function() {
+            // 136. 鼠标离开表情区域时
+            this.style.transform = 'scale(1)';  // 137. 恢复原大小
+        });
+    </script>
+</body>
+</html>

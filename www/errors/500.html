@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>500 - 服务器内部错误</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            /* 蓝色渐变，表示技术问题 */
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .error-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 50px;
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+        .error-emoji { font-size: 5rem; margin-bottom: 20px; }
+        .error-code { 
+            font-size: 6rem; 
+            font-weight: 800; 
+            color: #3498db;  /* 蓝色错误代码 */
+            margin-bottom: 10px; 
+        }
+        .error-title { 
+            font-size: 2rem; 
+            margin: 20px 0; 
+            color: #444; 
+        }
+        .error-message { 
+            font-size: 1.1rem; 
+            line-height: 1.6; 
+            color: #666; 
+            margin: 20px 0; 
+        }
+        .action-buttons { 
+            display: flex; 
+            gap: 15px; 
+            justify-content: center; 
+            margin-top: 30px; 
+        }
+        .btn { 
+            padding: 12px 30px; 
+            border-radius: 50px; 
+            text-decoration: none; 
+            font-weight: 600; 
+            transition: all 0.3s; 
+        }
+        .btn-primary { 
+            background: #3498db;  /* 蓝色按钮 */
+            color: white; 
+        }
+        .btn-primary:hover { 
+            background: #2980b9;  /* 深蓝色悬停 */
+            transform: translateY(-3px); 
+        }
+        .btn-secondary { 
+            background: #f8f9fa; 
+            color: #495057; 
+            border: 1px solid #dee2e6; 
+        }
+        .btn-secondary:hover { 
+            background: #e9ecef; 
+            transform: translateY(-3px); 
+        }
+        .tip-box {
+            margin-top: 30px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            text-align: left;
+        }
+        .tip-box p {
+            font-size: 0.9rem;
+            color: #888;
+            margin: 0;
+        }
+        .tip-box ul {
+            font-size: 0.9rem;
+            color: #666;
+            margin: 10px 0 0 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <div class="error-emoji">🔧</div>  <!-- 工具符号 -->
+        <h1 class="error-code">500</h1>
+        <h2 class="error-title">服务器开小差了</h2>
+        
+        <p class="error-message">
+            抱歉，服务器在处理您的请求时遇到了问题。<br>
+            我们的工程师已经收到通知，正在紧急修复。
+        </p>
+        
+        <div class="action-buttons">
+            <a href="/" class="btn btn-primary">🏠 返回首页</a>
+            <a href="javascript:location.reload()" class="btn btn-secondary">🔄 刷新页面</a>
+            <!-- location.reload() 重新加载当前页面 -->
+        </div>
+        
+        <div class="tip-box">
+            <p><strong>提示：</strong> 您可以尝试以下操作：</p>
+            <ul>
+                <li>稍后重试</li>
+                <li>清除浏览器缓存</li>
+                <li>检查网络连接</li>
+                <li>联系网站管理员</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

@@ -123,6 +123,33 @@ tinywebserver/fast:
 	$(MAKE) -f CMakeFiles/tinywebserver.dir/build.make CMakeFiles/tinywebserver.dir/build
 .PHONY : tinywebserver/fast
 
+src/config.o: src/config.cpp.o
+
+.PHONY : src/config.o
+
+# target to build an object file
+src/config.cpp.o:
+	$(MAKE) -f CMakeFiles/tinywebserver.dir/build.make CMakeFiles/tinywebserver.dir/src/config.cpp.o
+.PHONY : src/config.cpp.o
+
+src/config.i: src/config.cpp.i
+
+.PHONY : src/config.i
+
+# target to preprocess a source file
+src/config.cpp.i:
+	$(MAKE) -f CMakeFiles/tinywebserver.dir/build.make CMakeFiles/tinywebserver.dir/src/config.cpp.i
+.PHONY : src/config.cpp.i
+
+src/config.s: src/config.cpp.s
+
+.PHONY : src/config.s
+
+# target to generate assembly for a file
+src/config.cpp.s:
+	$(MAKE) -f CMakeFiles/tinywebserver.dir/build.make CMakeFiles/tinywebserver.dir/src/config.cpp.s
+.PHONY : src/config.cpp.s
+
 src/main.o: src/main.cpp.o
 
 .PHONY : src/main.o
@@ -149,6 +176,33 @@ src/main.s: src/main.cpp.s
 src/main.cpp.s:
 	$(MAKE) -f CMakeFiles/tinywebserver.dir/build.make CMakeFiles/tinywebserver.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
+
+src/mime_types.o: src/mime_types.cpp.o
+
+.PHONY : src/mime_types.o
+
+# target to build an object file
+src/mime_types.cpp.o:
+	$(MAKE) -f CMakeFiles/tinywebserver.dir/build.make CMakeFiles/tinywebserver.dir/src/mime_types.cpp.o
+.PHONY : src/mime_types.cpp.o
+
+src/mime_types.i: src/mime_types.cpp.i
+
+.PHONY : src/mime_types.i
+
+# target to preprocess a source file
+src/mime_types.cpp.i:
+	$(MAKE) -f CMakeFiles/tinywebserver.dir/build.make CMakeFiles/tinywebserver.dir/src/mime_types.cpp.i
+.PHONY : src/mime_types.cpp.i
+
+src/mime_types.s: src/mime_types.cpp.s
+
+.PHONY : src/mime_types.s
+
+# target to generate assembly for a file
+src/mime_types.cpp.s:
+	$(MAKE) -f CMakeFiles/tinywebserver.dir/build.make CMakeFiles/tinywebserver.dir/src/mime_types.cpp.s
+.PHONY : src/mime_types.cpp.s
 
 src/simple_logger.o: src/simple_logger.cpp.o
 
@@ -186,9 +240,15 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... tinywebserver"
+	@echo "... src/config.o"
+	@echo "... src/config.i"
+	@echo "... src/config.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... src/mime_types.o"
+	@echo "... src/mime_types.i"
+	@echo "... src/mime_types.s"
 	@echo "... src/simple_logger.o"
 	@echo "... src/simple_logger.i"
 	@echo "... src/simple_logger.s"

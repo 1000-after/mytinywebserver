@@ -7,7 +7,7 @@
 using namespace std;
 
 //构造函数
-SimpleLogger::SimpleLogger(LogLevel level, bool file_log): current_level(level), enable_file_log(file_log){
+SimpleLogger::SimpleLogger(LogLevel level, bool file_log):current_level(level),enable_file_log(file_log){
 
 }
 
@@ -23,7 +23,6 @@ string SimpleLogger::getCurrentTime(){
 
     char time_str[100];
     strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", local_time);
-
     return string(time_str);
 }
 
@@ -47,7 +46,7 @@ void SimpleLogger::outputToConsole(const string& log_entry){
 void SimpleLogger::outputToFile(const string& log_entry){
     if(!enable_file_log) return;
 
-    //生成日志文件名(每天一个文件)
+    //生成日志文件名（每天一个文件）
     time_t now = time(nullptr);
     tm* local_time = localtime(&now);
 
@@ -56,14 +55,14 @@ void SimpleLogger::outputToFile(const string& log_entry){
 
     ofstream log_file(filename, ios::app);
     if(log_file.is_open()){
-        log_file << log_entry << endl;
+        log_file << log_entry <<endl;
         log_file.close();
     }
 }
 
 //主日志函数
 void SimpleLogger::log(LogLevel level, const string& message){
-    // 如果当前日志级别高于要记录的级别，则不记录
+    //如果当前日志级别高于要记录的级别，则不激励
     if(level < current_level){
         return;
     }
@@ -80,12 +79,15 @@ void SimpleLogger::log(LogLevel level, const string& message){
 void SimpleLogger::debug(const string& message){
     log(DEBUG, message);
 }
+
 void SimpleLogger::info(const string& message){
     log(INFO, message);
 }
+
 void SimpleLogger::warning(const string& message){
     log(WARNING, message);
 }
+
 void SimpleLogger::error(const string& message){
     log(ERROR, message);
 }

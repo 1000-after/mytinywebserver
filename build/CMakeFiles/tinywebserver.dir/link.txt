@@ -1,1 +1,1 @@
-/usr/bin/c++     CMakeFiles/tinywebserver.dir/src/main.cpp.o CMakeFiles/tinywebserver.dir/src/simple_logger.cpp.o  -o bin/tinywebserver  -lpthread 
+/usr/bin/c++     CMakeFiles/tinywebserver.dir/src/main.cpp.o CMakeFiles/tinywebserver.dir/src/simple_logger.cpp.o CMakeFiles/tinywebserver.dir/src/mime_types.cpp.o CMakeFiles/tinywebserver.dir/src/config.cpp.o  -o bin/tinywebserver  -lpthread 

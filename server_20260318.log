@@ -1,0 +1,112 @@
+2026-03-18 20:18:24 [INFO] 配置文件加载成功:config/server.conf
+2026-03-18 20:18:24 [INFO] === 当前配置 ===
+2026-03-18 20:18:24 [INFO]  = ==================== 性能配置 =====================
+2026-03-18 20:18:24 [INFO] log.file = logs/server.log  #日志文件路径
+2026-03-18 20:18:24 [INFO] log.level = INFO     # 日志级别: DEBUG/INFO/WARNING/ERROR
+2026-03-18 20:18:24 [INFO] log.max_size = 10485760            # 日志文件最大大小（10MB）
+2026-03-18 20:18:24 [INFO] performance.cache_enabled = true # 是否启用缓存
+2026-03-18 20:18:24 [INFO] performance.cache_size = 100
+2026-03-18 20:18:24 [INFO] performance.threads = 4    # 工作线程数（稍后实现）
+2026-03-18 20:18:24 [INFO] preformance.cache_size = 100    # 缓存大小（文件数）
+2026-03-18 20:18:24 [INFO] security.allow_directory_listing = false  # 是否允许目录浏览
+2026-03-18 20:18:24 [INFO] security.enable_access_log = true   # 是否记录访问日志
+2026-03-18 20:18:24 [INFO] server.backlog = 128    # 等待队列长度
+2026-03-18 20:18:24 [INFO] server.max_connections = 1000   # 最大并发连接数
+2026-03-18 20:18:24 [INFO] server.port = 8080 # 监听端口
+2026-03-18 20:18:24 [INFO] server.root_dir = ./www # 网页文件根目录
+2026-03-18 20:18:24 [INFO] server.timeout = 30      # 连接超时（秒）
+2026-03-18 20:18:24 [INFO] ================
+2026-03-18 20:18:24 [ERROR] 根目录不存在: ./www # 网页文件根目录
+2026-03-18 20:22:59 [INFO] 配置文件加载成功:config/server.conf
+2026-03-18 20:22:59 [INFO] === 当前配置 ===
+2026-03-18 20:22:59 [INFO]  = ==================== 性能配置 =====================
+2026-03-18 20:22:59 [INFO] log.file = logs/server.log  #日志文件路径
+2026-03-18 20:22:59 [INFO] log.level = INFO     # 日志级别: DEBUG/INFO/WARNING/ERROR
+2026-03-18 20:22:59 [INFO] log.max_size = 10485760            # 日志文件最大大小（10MB）
+2026-03-18 20:22:59 [INFO] performance.cache_enabled = true # 是否启用缓存
+2026-03-18 20:22:59 [INFO] performance.cache_size = 100
+2026-03-18 20:22:59 [INFO] performance.threads = 4    # 工作线程数（稍后实现）
+2026-03-18 20:22:59 [INFO] preformance.cache_size = 100    # 缓存大小（文件数）
+2026-03-18 20:22:59 [INFO] security.allow_directory_listing = false  # 是否允许目录浏览
+2026-03-18 20:22:59 [INFO] security.enable_access_log = true   # 是否记录访问日志
+2026-03-18 20:22:59 [INFO] server.backlog = 128    # 等待队列长度
+2026-03-18 20:22:59 [INFO] server.max_connections = 1000   # 最大并发连接数
+2026-03-18 20:22:59 [INFO] server.port = 8080 # 监听端口
+2026-03-18 20:22:59 [INFO] server.root_dir = /home/qianzhu/test/tinywebserver/www # 网页文件根目录
+2026-03-18 20:22:59 [INFO] server.timeout = 30      # 连接超时（秒）
+2026-03-18 20:22:59 [INFO] ================
+2026-03-18 20:22:59 [ERROR] 根目录不存在: /home/qianzhu/test/tinywebserver/www # 网页文件根目录
+2026-03-18 20:27:29 [INFO] 配置文件加载成功:config/server.conf
+2026-03-18 20:27:29 [INFO] === 当前配置 ===
+2026-03-18 20:27:29 [INFO] log.file = logs/server.log
+2026-03-18 20:27:29 [INFO] log.level = INFO
+2026-03-18 20:27:29 [INFO] log.max_size = 10485760
+2026-03-18 20:27:29 [INFO] performance.cache_enabled = true
+2026-03-18 20:27:29 [INFO] performance.cache_size = 100
+2026-03-18 20:27:29 [INFO] performance.threads = 4
+2026-03-18 20:27:29 [INFO] preformance.cache_size = 100
+2026-03-18 20:27:29 [INFO] security.allow_directory_listing = false
+2026-03-18 20:27:29 [INFO] security.enable_access_log = true
+2026-03-18 20:27:29 [INFO] server.backlog = 128
+2026-03-18 20:27:29 [INFO] server.max_connections = 1000
+2026-03-18 20:27:29 [INFO] server.port = 8080
+2026-03-18 20:27:29 [INFO] server.root_dir = ./www
+2026-03-18 20:27:29 [INFO] server.timeout = 30
+2026-03-18 20:27:29 [INFO] ================
+2026-03-18 20:27:29 [INFO] 🚀 启动Web服务器...
+2026-03-18 20:27:29 [INFO] 监听端口: 8080
+2026-03-18 20:27:29 [INFO] 根目录: ./www
+2026-03-18 20:27:29 [INFO] 日志级别: INFO
+2026-03-18 20:27:29 [INFO] 创建电话机
+2026-03-18 20:27:29 [INFO] 📡 电话号码设置为8080
+2026-03-18 20:27:29 [INFO] 🔔 电话已开启响铃，等待来电...
+2026-03-18 20:27:29 [INFO] 🌐 请访问: http://localhost:8080/
+2026-03-18 20:27:29 [INFO] ⏳ 等待客户连接...
+2026-03-18 20:27:33 [INFO] 📞 接到一个电话
+2026-03-18 20:27:33 [INFO] 📍 请求路径: /
+2026-03-18 20:27:33 [INFO] 📄 文件扩展名: html → Content-Type: text/html
+2026-03-18 20:27:33 [INFO] ✅ 文件读取成功 (8302 字节), Content-Type: text/html
+2026-03-18 20:27:33 [INFO] 📤 发送响应 (8402 字节)
+2026-03-18 20:27:33 [INFO] 访问日志: 127.0.0.1:38948 / -> 200
+2026-03-18 20:27:33 [INFO] ✅ 电话挂断
+2026-03-18 20:27:33 [INFO] ⏳ 等待客户连接...
+2026-03-18 20:27:33 [INFO] 📞 接到一个电话
+2026-03-18 20:27:38 [INFO] 📍 请求路径: /errors/403.html
+2026-03-18 20:27:38 [INFO] 📄 文件扩展名: html → Content-Type: text/html
+2026-03-18 20:27:38 [INFO] ✅ 文件读取成功 (3320 字节), Content-Type: text/html
+2026-03-18 20:27:38 [INFO] 📤 发送响应 (3420 字节)
+2026-03-18 20:27:38 [INFO] 访问日志: 127.0.0.1:38952 /errors/403.html -> 200
+2026-03-18 20:27:38 [INFO] ✅ 电话挂断
+2026-03-18 20:27:38 [INFO] ⏳ 等待客户连接...
+2026-03-18 20:27:40 [INFO] 📞 接到一个电话
+2026-03-18 20:27:40 [INFO] 📍 请求路径: /
+2026-03-18 20:27:40 [INFO] 📄 文件扩展名: html → Content-Type: text/html
+2026-03-18 20:27:40 [INFO] ✅ 文件读取成功 (8302 字节), Content-Type: text/html
+2026-03-18 20:27:40 [INFO] 📤 发送响应 (8402 字节)
+2026-03-18 20:27:40 [INFO] 访问日志: 127.0.0.1:47854 / -> 200
+2026-03-18 20:27:40 [INFO] ✅ 电话挂断
+2026-03-18 20:27:40 [INFO] ⏳ 等待客户连接...
+2026-03-18 20:27:40 [INFO] 📞 接到一个电话
+2026-03-18 20:27:41 [INFO] 📍 请求路径: /errors/500.html
+2026-03-18 20:27:41 [INFO] 📄 文件扩展名: html → Content-Type: text/html
+2026-03-18 20:27:41 [INFO] ✅ 文件读取成功 (3725 字节), Content-Type: text/html
+2026-03-18 20:27:41 [INFO] 📤 发送响应 (3825 字节)
+2026-03-18 20:27:41 [INFO] 访问日志: 127.0.0.1:47864 /errors/500.html -> 200
+2026-03-18 20:27:41 [INFO] ✅ 电话挂断
+2026-03-18 20:27:41 [INFO] ⏳ 等待客户连接...
+2026-03-18 20:27:43 [INFO] 📞 接到一个电话
+2026-03-18 20:27:43 [INFO] 📍 请求路径: /
+2026-03-18 20:27:43 [INFO] 📄 文件扩展名: html → Content-Type: text/html
+2026-03-18 20:27:43 [INFO] ✅ 文件读取成功 (8302 字节), Content-Type: text/html
+2026-03-18 20:27:43 [INFO] 📤 发送响应 (8402 字节)
+2026-03-18 20:27:43 [INFO] 访问日志: 127.0.0.1:47880 / -> 200
+2026-03-18 20:27:43 [INFO] ✅ 电话挂断
+2026-03-18 20:27:43 [INFO] ⏳ 等待客户连接...
+2026-03-18 20:27:43 [INFO] 📞 接到一个电话
+2026-03-18 20:27:44 [INFO] 📍 请求路径: /nonexist.html
+2026-03-18 20:27:44 [ERROR] 📂 文件打开失败: /home/qianzhu/test/tinywebserver/www/nonexist.html 原因: No such file or directory
+2026-03-18 20:27:44 [WARN] ❌ 文件不存在，返回404: /home/qianzhu/test/tinywebserver/www/nonexist.html
+2026-03-18 20:27:44 [INFO] 📤 发送响应 (12000 字节)
+2026-03-18 20:27:44 [INFO] 访问日志: 127.0.0.1:47884 /nonexist.html -> 404
+2026-03-18 20:27:44 [INFO] ✅ 电话挂断
+2026-03-18 20:27:44 [INFO] ⏳ 等待客户连接...
