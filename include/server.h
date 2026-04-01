@@ -7,7 +7,8 @@
 void runServer(uint16_t ports);
 
 
-
+//新增设置非阻塞函数
+int setnoblocking(int fd);
 
 
 #endif

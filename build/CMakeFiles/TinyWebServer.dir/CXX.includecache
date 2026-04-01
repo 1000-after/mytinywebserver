@@ -29,4 +29,8 @@ string.h
 -
 server.h
 /home/qianzhu/test/tinywebserver/src/server.h
+fcntl.h
+-
+errno.h
+-
 
