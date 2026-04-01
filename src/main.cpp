@@ -37,6 +37,11 @@ string buildErrorResponse(int code, const string& message, const string& errorCo
 //全局日志对象
 SimpleLogger logger(INFO, true);    //INFO级别,启用文件日志
 
+
+// 处理单个客户端连接的函数
+void handleClient(int client_fd, const string& client_ip, int client_port,
+                  const string& root_dir, bool enable_access_log);
+
 // 主函数（程序入口）
 int main(int argc, char* argv[])
 {
@@ -106,7 +111,7 @@ int main(int argc, char* argv[])
     memset(&address, 0 , sizeof(address));
     address.sin_family = AF_INET;                // 地址族：IPv4
     address.sin_addr.s_addr = INADDR_ANY;        // 监听所有网卡
-    address.sin_port = htons(8080);              // 监听8080端口（主机字节序转网络字节序）
+    address.sin_port = htons(port);  // 使用配置的端口              // 监听8080端口（主机字节序转网络字节序）
 
     logger.info("📡 电话号码设置为8080");
 
@@ -118,7 +123,7 @@ int main(int argc, char* argv[])
     }
 
     // ===================== 第五步：监听端口（类比“开机等来电”） =====================
-    if(listen(server_fd, 3) < 0){
+    if(listen(server_fd, backlog) < 0){
         logger.error("监听失败: " + string(strerror(errno)));
         close(server_fd);  // 释放资源
         return 1;  // 异常退出
@@ -128,172 +133,196 @@ int main(int argc, char* argv[])
     logger.info("🌐 请访问: http://localhost:8080/");
 
     // ===================== 第六步：循环处理客户端请求（核心循环） =====================
+    // while(true){
+    //     logger.info("⏳ 等待客户连接...");
+
+    //     // 存储客户端的IP+端口信息
+    //     struct sockaddr_in client_addr;
+    //     socklen_t client_len = sizeof(client_addr);
+
+    //     // 阻塞等待客户端连接
+    //     int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
+    //     if(client_fd < 0){   // 检查连接是否接受失败
+    //         logger.warning("接电话失败: " + string(strerror(errno)));
+    //         continue;  // 跳过本次循环，继续等待下一个连接
+    //     }
+
+    //     // ===================== 提取客户端IP和端口（日志打印） =====================
+    //     char client_ip[INET_ADDRSTRLEN];
+    //     inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip));
+    //     int client_port = ntohs(client_addr.sin_port);
+
+    //     logger.info("📞 接到一个电话");
+    //     logger.debug("   📍 客户端IP: " + string(client_ip) + ":" + to_string(client_port));
+    //     logger.debug("   #️⃣ 客户端编号: " + to_string(client_fd));
+
+    //     // ===================== 读取客户端的HTTP请求 =====================
+    //     char buffer[4096] = {0};
+    //     int bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);       
+
+    //     // ===================== 处理读取结果（分支逻辑） =====================
+    //     if(bytes_read > 0){ // 读取到有效数据
+    //         // 打印请求预览（避免日志过长）
+    //         logger.debug("📨 客户端请求:");
+    //         logger.debug("--------------------------------");
+    //         string request_preview(buffer);
+    //         if (request_preview.length() > 200) {
+    //             request_preview = request_preview.substr(0, 200) + "...";
+    //         }
+    //         logger.debug(request_preview);
+    //         logger.debug("--------------------------------");
+
+    //         // ===================== 解析HTTP请求路径 =====================
+    //         string request(buffer);
+    //         string path = "/";  // 默认路径：根路径（访问首页）
+
+    //         // 提取请求行中的路径（METHOD PATH VERSION）
+    //         size_t start = request.find(' ');
+    //         if(start != string::npos){  
+    //             size_t end = request.find(' ', start + 1);
+    //             if(end != string::npos){     
+    //                 path = request.substr(start + 1, end - start - 1);
+    //             }
+    //         }
+
+    //         // 截断查询参数（去掉?后面的内容）
+    //         size_t query_pos = path.find('?');
+    //         if(query_pos != string::npos){
+    //             path = path.substr(0, query_pos);
+    //             logger.debug("🔧 截断查询参数后路径: " + path);
+    //         }
+
+    //         logger.info("📍 请求路径: " + path);
+
+    //         // ===================== 拼接文件绝对路径 =====================
+    //         // !!! 请确认此路径是你的实际文件目录 !!!
+    //         //string base_path =  "/home/qianzhu/test/tinywebserver/www";
+    //         string base_path = root_dir;
+    //         string filepath = base_path + path;
+            
+    //         if(path == "/"){  // 如果请求根路径，默认访问index.html
+    //             filepath = base_path + "/index.html";
+    //         }
+
+    //         logger.debug("📁 尝试打开文件: " + filepath);
+
+    //         // ===================== 读取文件内容 =====================
+    //         string content = readFile(filepath);
+    //         string response; 
+    //         string content_type = "text/plain"; // 默认类型
+
+    //         if (!content.empty()) {
+    //             // 提取文件扩展名并获取MIME类型
+    //             size_t dot_pos = filepath.find_last_of('.');
+    //             string ext = "";
+    //             if (dot_pos != string::npos) {
+    //                 ext = filepath.substr(dot_pos + 1); // 提取扩展名
+    //                 content_type = mime_types::get_mime_type(ext); // 获取MIME类型
+    //             }
+                
+    //             // 打印MIME类型日志（调试关键）
+    //             logger.info("📄 文件扩展名: " + ext + " → Content-Type: " + content_type);
+                
+    //             // 构建响应
+    //             response = buildResponse(content, content_type);
+    //             logger.info("✅ 文件读取成功 (" + to_string(content.length()) + " 字节), Content-Type: " + content_type);
+    //         } else { 
+
+    //             // 1. 先尝试读取漂亮的404错误页面
+    //             string error_file = base_path   + "/errors/404.html";
+    //             string error_content = readFile(error_file);
+
+    //             if(error_content.empty()){
+    //             // 文件不存在，构建404响应
+    //             string error_content = 
+    //                 "<!DOCTYPE html>"
+    //                 "<html>"
+    //                 "<head><title>404 Not Found</title></head>"
+    //                 "<body>"
+    //                 "<h1>404 Not Found</h1>"
+    //                 "<p>请求的文件不存在: " + path + "</p>"
+    //                 "<p><a href='/'>返回首页</a></p>"
+    //                 "</body></html>";
+    //             }else{
+    //         // 3. 错误页面文件存在，我们需要动态替换里面的路径信息
+        
+    //     // 3.1 查找HTML中显示路径的位置
+    //     // 我们在404.html中有一个 <span id="request-path">这里</span>
+    //     // 要找到这个span，把"这里"替换成实际的路径
+        
+    //     // 3.2 在HTML字符串中查找 id="request-path"
+    //     size_t pos = error_content.find("id=\"request-path\"");
+
+    //     if(pos != string::npos){
+    //         // 3.3 找到了，现在要定位到 > 和 < 之间的文本
+    //         // <span id="request-path">这里</span>
+    //         //                    start↑     end↑
+            
+    //         // 找到 > 字符的位置（开始标签的结束）
+    //         size_t start = error_content.find(">", pos + 1);
+    //          // 找到 < 字符的位置（结束标签的开始）
+    //         size_t end = error_content.find("<", start);
+
+    //          // 3.4 确保找到了正确的边界
+    //         if(start != string::npos && end!= string::npos){
+    //                        // 3.5 替换文本
+    //             // replace(开始位置, 要替换的长度, 新字符串)
+    //                 error_content.replace(start, end-start, path);
+    //         }
+
+    //     }
+
+    //             }
+    //             response = buildErrorResponse(404, "Not Found", error_content);
+    //             logger.warning("❌ 文件不存在，返回404: " + filepath);
+    //         }
+
+    //         // ===================== 发送响应给客户端 =====================
+    //         ssize_t send_len = write(client_fd, response.c_str(), response.length());
+    //         if(send_len < 0){     // 发送失败
+    //             logger.error("响应发送失败: " + string(strerror(errno)));
+    //         } else{ // 发送成功
+    //             logger.info("📤 发送响应 (" + to_string(send_len) + " 字节)");
+                
+    //             // 记录访问日志
+    //             string access_log = "访问日志: " + string(client_ip) + ":" + 
+    //                                to_string(client_port) + " " + path + " -> " +
+    //                                (content.empty() ? "404" : "200");
+    //             logger.info(access_log);
+    //         }
+    //     } else if(bytes_read == 0){  // 客户端主动断开连接
+    //         logger.warning("📭 客户端什么都没说就挂了");
+    //     } else {  // 读取失败（网络异常等）
+    //         logger.error("数据读取失败: " + string(strerror(errno)));
+    //     }
+
+    //     // ===================== 关闭客户端连接（释放资源） =====================
+    //     close(client_fd);
+    //     logger.info("✅ 电话挂断");
+    // }
+
     while(true){
-        logger.info("⏳ 等待客户连接...");
+    logger.info("⏳ 等待客户连接...");
 
-        // 存储客户端的IP+端口信息
-        struct sockaddr_in client_addr;
-        socklen_t client_len = sizeof(client_addr);
+    struct sockaddr_in client_addr;
+    socklen_t client_len = sizeof(client_addr);
 
-        // 阻塞等待客户端连接
-        int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
-        if(client_fd < 0){   // 检查连接是否接受失败
-            logger.warning("接电话失败: " + string(strerror(errno)));
-            continue;  // 跳过本次循环，继续等待下一个连接
-        }
-
-        // ===================== 提取客户端IP和端口（日志打印） =====================
-        char client_ip[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip));
-        int client_port = ntohs(client_addr.sin_port);
-
-        logger.info("📞 接到一个电话");
-        logger.debug("   📍 客户端IP: " + string(client_ip) + ":" + to_string(client_port));
-        logger.debug("   #️⃣ 客户端编号: " + to_string(client_fd));
-
-        // ===================== 读取客户端的HTTP请求 =====================
-        char buffer[4096] = {0};
-        int bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);       
-
-        // ===================== 处理读取结果（分支逻辑） =====================
-        if(bytes_read > 0){ // 读取到有效数据
-            // 打印请求预览（避免日志过长）
-            logger.debug("📨 客户端请求:");
-            logger.debug("--------------------------------");
-            string request_preview(buffer);
-            if (request_preview.length() > 200) {
-                request_preview = request_preview.substr(0, 200) + "...";
-            }
-            logger.debug(request_preview);
-            logger.debug("--------------------------------");
-
-            // ===================== 解析HTTP请求路径 =====================
-            string request(buffer);
-            string path = "/";  // 默认路径：根路径（访问首页）
-
-            // 提取请求行中的路径（METHOD PATH VERSION）
-            size_t start = request.find(' ');
-            if(start != string::npos){  
-                size_t end = request.find(' ', start + 1);
-                if(end != string::npos){     
-                    path = request.substr(start + 1, end - start - 1);
-                }
-            }
-
-            // 截断查询参数（去掉?后面的内容）
-            size_t query_pos = path.find('?');
-            if(query_pos != string::npos){
-                path = path.substr(0, query_pos);
-                logger.debug("🔧 截断查询参数后路径: " + path);
-            }
-
-            logger.info("📍 请求路径: " + path);
-
-            // ===================== 拼接文件绝对路径 =====================
-            // !!! 请确认此路径是你的实际文件目录 !!!
-            string base_path =  "/home/qianzhu/test/tinywebserver/www";
-            string filepath = base_path + path;
-            
-            if(path == "/"){  // 如果请求根路径，默认访问index.html
-                filepath = base_path + "/index.html";
-            }
-
-            logger.debug("📁 尝试打开文件: " + filepath);
-
-            // ===================== 读取文件内容 =====================
-            string content = readFile(filepath);
-            string response; 
-            string content_type = "text/plain"; // 默认类型
-
-            if (!content.empty()) {
-                // 提取文件扩展名并获取MIME类型
-                size_t dot_pos = filepath.find_last_of('.');
-                string ext = "";
-                if (dot_pos != string::npos) {
-                    ext = filepath.substr(dot_pos + 1); // 提取扩展名
-                    content_type = mime_types::get_mime_type(ext); // 获取MIME类型
-                }
-                
-                // 打印MIME类型日志（调试关键）
-                logger.info("📄 文件扩展名: " + ext + " → Content-Type: " + content_type);
-                
-                // 构建响应
-                response = buildResponse(content, content_type);
-                logger.info("✅ 文件读取成功 (" + to_string(content.length()) + " 字节), Content-Type: " + content_type);
-            } else { 
-
-                // 1. 先尝试读取漂亮的404错误页面
-                string error_file = base_path   + "/errors/404.html";
-                string error_content = readFile(error_file);
-
-                if(error_content.empty()){
-                // 文件不存在，构建404响应
-                string error_content = 
-                    "<!DOCTYPE html>"
-                    "<html>"
-                    "<head><title>404 Not Found</title></head>"
-                    "<body>"
-                    "<h1>404 Not Found</h1>"
-                    "<p>请求的文件不存在: " + path + "</p>"
-                    "<p><a href='/'>返回首页</a></p>"
-                    "</body></html>";
-                }else{
-            // 3. 错误页面文件存在，我们需要动态替换里面的路径信息
-        
-        // 3.1 查找HTML中显示路径的位置
-        // 我们在404.html中有一个 <span id="request-path">这里</span>
-        // 要找到这个span，把"这里"替换成实际的路径
-        
-        // 3.2 在HTML字符串中查找 id="request-path"
-        size_t pos = error_content.find("id=\"request-path\"");
-
-        if(pos != string::npos){
-            // 3.3 找到了，现在要定位到 > 和 < 之间的文本
-            // <span id="request-path">这里</span>
-            //                    start↑     end↑
-            
-            // 找到 > 字符的位置（开始标签的结束）
-            size_t start = error_content.find(">", pos + 1);
-             // 找到 < 字符的位置（结束标签的开始）
-            size_t end = error_content.find("<", start);
-
-             // 3.4 确保找到了正确的边界
-            if(start != string::npos && end!= string::npos){
-                           // 3.5 替换文本
-                // replace(开始位置, 要替换的长度, 新字符串)
-                    error_content.replace(start, end-start, path);
-            }
-
-        }
-
-                }
-                response = buildErrorResponse(404, "Not Found", error_content);
-                logger.warning("❌ 文件不存在，返回404: " + filepath);
-            }
-
-            // ===================== 发送响应给客户端 =====================
-            ssize_t send_len = write(client_fd, response.c_str(), response.length());
-            if(send_len < 0){     // 发送失败
-                logger.error("响应发送失败: " + string(strerror(errno)));
-            } else{ // 发送成功
-                logger.info("📤 发送响应 (" + to_string(send_len) + " 字节)");
-                
-                // 记录访问日志
-                string access_log = "访问日志: " + string(client_ip) + ":" + 
-                                   to_string(client_port) + " " + path + " -> " +
-                                   (content.empty() ? "404" : "200");
-                logger.info(access_log);
-            }
-        } else if(bytes_read == 0){  // 客户端主动断开连接
-            logger.warning("📭 客户端什么都没说就挂了");
-        } else {  // 读取失败（网络异常等）
-            logger.error("数据读取失败: " + string(strerror(errno)));
-        }
-
-        // ===================== 关闭客户端连接（释放资源） =====================
-        close(client_fd);
-        logger.info("✅ 电话挂断");
+    int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
+    if(client_fd < 0){
+        logger.warning("接电话失败: " + string(strerror(errno)));
+        continue;
     }
+
+    char client_ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip));
+    int client_port = ntohs(client_addr.sin_port);
+
+    logger.info("📞 接到一个电话");
+    logger.debug("   客户端IP: " + string(client_ip) + ":" + to_string(client_port));
+    
+    // 调用处理函数
+    handleClient(client_fd, string(client_ip), client_port, root_dir, enable_access_log);
+}
 
     // 关闭监听套接字（无限循环不会执行到这里）
     close(server_fd);
@@ -339,4 +368,110 @@ string buildErrorResponse(int code, const string& message, const string& errorCo
         + errorContent;
 
     return response;
+}
+
+
+// 处理单个客户端连接的函数
+void handleClient(int client_fd, const string& client_ip, int client_port,
+                  const string& root_dir, bool enable_access_log) {
+    
+    char buffer[4096] = {0};
+    int bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
+    
+    if(bytes_read > 0) {
+        // 解析请求
+        string request(buffer);
+        string path = "/";
+        
+        // 提取请求路径
+        size_t start = request.find(' ');
+        if(start != string::npos) {  
+            size_t end = request.find(' ', start + 1);
+            if(end != string::npos) {     
+                path = request.substr(start + 1, end - start - 1);
+            }
+        }
+        
+        // 去掉查询参数
+        size_t query_pos = path.find('?');
+        if(query_pos != string::npos) {
+            path = path.substr(0, query_pos);
+        }
+        
+        logger.info("📍 请求路径: " + path);
+        
+        // 拼接文件路径
+        string filepath = root_dir + path;
+        if(path == "/") {
+            filepath = root_dir + "/index.html";
+        }
+        
+        // 读取文件
+        string content = readFile(filepath);
+        string response;
+        string content_type = "text/plain";
+        
+        if (!content.empty()) {
+            // 获取MIME类型
+            size_t dot_pos = filepath.find_last_of('.');
+            if (dot_pos != string::npos) {
+                string ext = filepath.substr(dot_pos + 1);
+                content_type = mime_types::get_mime_type(ext);
+            }
+            
+            response = buildResponse(content, content_type);
+            logger.info("✅ 文件读取成功 (" + to_string(content.length()) + " 字节)");
+        } else {
+            // 404错误处理
+            string error_file = root_dir + "/errors/404.html";
+            string error_content = readFile(error_file);
+            
+            if(error_content.empty()) {
+                error_content = 
+                    "<!DOCTYPE html>"
+                    "<html>"
+                    "<head><title>404 Not Found</title></head>"
+                    "<body>"
+                    "<h1>404 Not Found</h1>"
+                    "<p>请求的文件不存在: " + path + "</p>"
+                    "<p><a href='/'>返回首页</a></p>"
+                    "</body></html>";
+            } else {
+                // 替换路径信息
+                size_t pos = error_content.find("id=\"request-path\"");
+                if(pos != string::npos) {
+                    size_t start_tag = error_content.find(">", pos + 1);
+                    size_t end_tag = error_content.find("<", start_tag);
+                    if(start_tag != string::npos && end_tag != string::npos) {
+                        error_content.replace(start_tag, end_tag - start_tag, path);
+                    }
+                }
+            }
+            
+            response = buildErrorResponse(404, "Not Found", error_content);
+            logger.warning("❌ 文件不存在: " + filepath);
+        }
+        
+        // 发送响应
+        ssize_t send_len = write(client_fd, response.c_str(), response.length());
+        if(send_len < 0) {
+            logger.error("响应发送失败: " + string(strerror(errno)));
+        } else {
+            logger.info("📤 发送响应 (" + to_string(send_len) + " 字节)");
+            
+            if (enable_access_log) {
+                logger.info("访问日志: " + client_ip + ":" + 
+                           to_string(client_port) + " " + path + " -> " +
+                           (content.empty() ? "404" : "200"));
+            }
+        }
+    } else if(bytes_read == 0) {
+        logger.debug("客户端断开连接");
+    } else {
+        logger.error("数据读取失败: " + string(strerror(errno)));
+    }
+    
+    // 关闭连接
+    close(client_fd);
+    logger.debug("连接关闭");
 }
