@@ -7,7 +7,11 @@
 #IncludeRegexTransform: 
 
 ../include/server.h
-sys/types.h
+cstdint
+-
+sys/epoll.h
+-
+vector
 -
 
 /home/qianzhu/test/tinywebserver/src/main.cpp
@@ -35,6 +39,8 @@ errno.h
 -
 sys/epoll.h
 -
+unordered_map
+-
 server.h
-/home/qianzhu/test/tinywebserver/src/server.h
+-
 
