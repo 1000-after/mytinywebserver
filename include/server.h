@@ -25,6 +25,7 @@
 struct Connection{
     int fd = -1;
     std::vector<char> read_buf;
+    std::vector<char> write_buf;
 };
 
 //启动服务器
