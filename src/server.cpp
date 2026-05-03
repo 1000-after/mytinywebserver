@@ -1181,349 +1181,710 @@
 
 // ==============================================
 // 4.0 异步写缓冲区 + EPOLLOUT 完整版
-// 新特性：用户态写队列 + 异步发送 + 永不丢包
+// 新特性：用户态写队列 + 异步发送 + 永不丢包 std::vector<char> write_buf; // 写缓冲区
 // ==============================================
-// #include <stdio.h> //输出输入：printf打印日志、perror打印系统错误
+// #include <stdio.h>//输出输入：printf打印日志、perror打印系统错误
 // #include <stdlib.h> // 通用工具：内存分配、退出
 // #include <string.h> // 内存操作：memset、strlen
 // #include <unistd.h> // Unix系统调用：close、read、write
-// // Linux网络编程核心头文件
+// // // Linux网络编程核心头文件
 // #include <sys/socket.h> // socket、bind、listen、accept、send、recv
 // #include <netinet/in.h> // sockaddr_in结构体、htons/ntohl字节序转换
 // #include <fcntl.h> // fcntl：设置非阻塞模式
 // #include <errno.h> // 错误码：EAGAIN、EWOULDBLOCK等
-// #include <sys/epoll.h> // epoll_create1、epoll_ctl、epoll_wait
+// #include <sys/epoll.h>// epoll_create1、epoll_ctl、epoll_wait
 // // C++容器
 // #include <unordered_map> // 哈希表：快速查找客户端连接
+// #include "server.h"
 
-// #include <server.h>
-#include <stdio.h>//输出输入：printf打印日志、perror打印系统错误
-#include <stdlib.h> // 通用工具：内存分配、退出
-#include <string.h> // 内存操作：memset、strlen
-#include <unistd.h> // Unix系统调用：close、read、write
+// // 宏定义
+// #define MAX_EVENTS 1024   // epoll_wait最多接收多少个事件
+// #define BUF_SIZE 1024   // 每次read读取的临时缓冲区大小
+// #define MAX_PACKET_SIZE 65536 // 最大包长度64KB，防止攻击
+
+// // 全局哈希表：保存所有客户端连接
+// // key：客户端fd
+// // value：Connection结构体（包含读写缓冲区）
+// static std::unordered_map<int,Connection>g_connections;
+
+// // ==============================================
+// // 函数：设置文件描述符为非阻塞模式
+// // 作用：ET模式必须用非阻塞，否则会卡死
+// // ==============================================
+// int setnonblocking(int fd){
+//     int old_flag = fcntl(fd, F_GETFL);
+//     int new_flag = old_flag | O_NONBLOCK;
+//     fcntl(fd, F_SETFL, new_flag);
+//     return old_flag;
+// }
+
+
+// // ==============================================
+// // 函数：修改epoll监听的事件（新增/移除EPOLLOUT）
+// // 作用：动态控制监听读、写事件
+// // ==============================================
+// void epoll_mod(int epoll_fd, int fd, int events){
+//     epoll_event ev;
+//     ev.events = events; // 要监听的事件（EPOLLIN/EPOLLOUT）
+//     ev.data.fd = fd;    // 关联的fd
+//     // 调用epoll_ctl，MOD表示修改已有fd的监听事件
+//     epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &ev);
+// }
+
+// // ==============================================
+// // 函数：将fd添加到epoll监听
+// // 初始只监听读事件 EPOLLIN
+// // ==============================================
+// void epollAddFd(int epoll_fd, int fd){
+//     epoll_event ev;
+//     // ET边缘触发 + 监听可读
+//     ev.events = EPOLLIN | EPOLLET;
+//     ev.data.fd = fd;
+//     // 添加到epoll
+//     epoll_ctl(epoll_fd,  EPOLL_CTL_ADD, fd, &ev);
+//     //设置非阻塞
+//     setnonblocking(fd);
+// }
+
+// // ==============================================
+// // 协议头：1字节对齐，固定4字节长度
+// // ==============================================
+// #pragma pack(push, 1)
+// struct PacketHeader{
+//     uint32_t data_len;   // 数据体长度（必须网络字节序）
+// };
+// #pragma pack(pop)
+
+// // ==============================================
+// // 🔥 核心函数：异步发送（真正发送数据）
+// // 功能：循环把write_buf里的数据发给内核，直到发完或EAGAIN
+// // ==============================================
+// bool async_write(int epoll_fd, Connection& conn){
+//     // 循环：只要写缓冲区不为空，就一直尝试发送
+//     while(!conn.write_buf.empty()){
+//         // 调用write：尝试把write_buf里所有数据写入内核
+//         ssize_t n = write(
+//             conn.fd,    // 客户端fd
+//             conn.write_buf.data(),   // 发送队列首地址
+//             conn.write_buf.size()   // 队列数据长度
+//         );
+//         // --------------------
+//         // 情况1：成功发送了n字节
+//         // --------------------
+//         if(n > 0){
+//             // 从队列头部删除已发送的n字节（FIFO队列）
+//             conn.write_buf.erase(
+//                 conn.write_buf.begin(),
+//                 conn.write_buf.begin() + n
+//             );
+//         }
+//          // --------------------
+//         // 情况2：发送失败
+//         // --------------------
+//         else{
+//             // errno == EAGAIN：内核发送缓冲区满了！
+//             if(errno == EAGAIN || errno == EWOULDBLOCK){
+//                 // ------------------------------
+//                 // 🔥 关键：开启EPOLLOUT监听
+//                 // 告诉内核：等你有空了，通知我！
+//                 // ------------------------------
+//                 epoll_mod(epoll_fd, conn.fd, EPOLLIN | EPOLLET | EPOLLOUT);
+//                 return true;    // 不报错，只是暂时发不了
+//             }
+
+//             // 其他错误：连接断开、出错等
+//             return false;
+//         }
+
+//     }
+//     // --------------------
+//     // 走到这里：write_buf已经全部发空了
+//     // --------------------
+//     // 关闭EPOLLOUT！！！
+//     // 因为只要缓冲区可写，EPOLLOUT会一直触发，不关掉CPU 100%
+//     epoll_mod(epoll_fd, conn.fd, EPOLLIN | EPOLLET);
+//     return true;
+// }
+
+// // ==============================================
+// // 函数：将数据加入发送队列（不直接发送）
+// // ==============================================
+// bool add_write_queue(int epoll_fd, Connection& conn, const char* data, int len){
+//     // 把要发送的数据，追加到write_buf尾部（入队）
+//     conn.write_buf.insert(
+//         conn.write_buf.end(),
+//         data,
+//         data + len
+//     );
+//     // 入队后，立即尝试发送
+//     return async_write(epoll_fd, conn);
+// }
+
+// // ==============================================
+// // 函数：拆一个完整的包（和之前一样，只是发送改为异步）
+// // ==============================================
+// static bool parseOnePacket(int epoll_fd, Connection& conn){
+//     // 不够读包头，返回
+//     if(conn.read_buf.size() < sizeof(PacketHeader)){
+//         return false;
+//     }
+
+//     // 强转包头
+//     PacketHeader* header = (PacketHeader*)conn.read_buf.data();
+//     // 网络字节序转主机字节序
+//     uint32_t data_len = ntohl(header->data_len);
+
+
+//     // 非法包检查
+//     if (data_len == 0 || data_len > MAX_PACKET_SIZE) {
+//         printf("[错误] 非法包长度\n");
+//         return false;
+//     }
+
+//     // 总长度 = 包头4字节 + 数据长度
+//     uint32_t total_len = sizeof(PacketHeader) + data_len;
+//     // 不够一个完整包，返回
+//     if(conn.read_buf.size() < total_len)
+//         return false;
+
+//     // 数据指针：跳过包头
+//     char *data_ptr = conn.read_buf.data() + sizeof(PacketHeader);
+
+
+//     // ======================
+//     // 🔥 关键修改：不再直接write
+//     // 改为：加入发送队列，异步发送
+//     // ======================
+//     if(!add_write_queue(epoll_fd, conn, data_ptr, data_len)){
+//         return false;
+//     }
+
+//     printf("[成功拆包&异步发送] fd=%d 长度=%u\n", conn.fd, data_len);
+
+//     // 移除已处理的数据包
+//     conn.read_buf.erase(
+//         conn.read_buf.begin(),
+//         conn.read_buf.begin() + total_len
+//     );
+//     return true;
+// }
+
+
+// // ==============================================
+// // 函数：ET模式循环读取数据到读缓冲区
+// // ==============================================
+// static bool readToBuffer(int epoll_fd, int fd){
+//     // 找到当前连接
+//     auto it = g_connections.find(fd);
+//     if(it == g_connections.end()) return false;
+
+//     //临时数组
+//     char tmp[BUF_SIZE];
+
+//     //循环读，直到EAGAIN
+//     while(1){
+//         ssize_t n = read(fd, tmp, BUF_SIZE);
+//         if(n > 0){
+//             // 读到数据，追加到read_buf
+//             it->second.read_buf.insert(it->second.read_buf.end(), tmp, tmp + n);
+//         }else if(n == 0){
+//             //客户端关闭连接
+//             return false;
+//         }else{
+//             //无数据了，退出循环
+//             if(errno == EAGAIN || errno == EWOULDBLOCK) break;
+//             //其他错误
+//             return false;
+//         }
+//     }
+
+//     //循环拆包（处理粘包）
+//     while(parseOnePacket(epoll_fd, it->second));
+//     return true;
+// }
+
+// // ==============================================
+// // 函数：关闭连接并清理资源
+// // ==============================================
+// static void closeConnection(int epoll_fd, int fd){
+//     epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, nullptr);
+//     close(fd);
+//     g_connections.erase(fd);
+// }
+
+// // ==============================================
+// // 主函数：服务器启动入口
+// // ==============================================
+// void runServer(uint16_t ports){
+//     // 1. 创建TCP socket
+//     int sockfd = socket(PF_INET, SOCK_STREAM, 0);
+//     if(sockfd < 0){
+//         perror("socket"); return;
+//     }
+
+//     // 2. 设置端口复用
+//     int opt = 1;
+//     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt));
+
+
+//     // 3. 绑定IP和端口
+//     sockaddr_in addr;
+//     addr.sin_family = AF_INET;
+//     addr.sin_addr.s_addr = INADDR_ANY;
+//     addr.sin_port = htons(ports);
+
+//     if(bind(sockfd, (sockaddr*)&addr, sizeof(addr)) < 0){
+//         perror("bind"); close(sockfd); return;
+//     }
+
+//     // 4. 监听
+//     if(listen(sockfd, 100) < 0){
+//         perror("listen"); close(sockfd); return;
+//     }
+
+//     // 5. 创建epoll
+//     int epoll_fd = epoll_create1(0);
+//     if(epoll_fd < 0){
+//         perror("epoll"); close(sockfd); return;
+//     }
+
+//     // 6. 监听socket加入epoll
+//     epollAddFd(epoll_fd, sockfd);
+
+//     epoll_event events[MAX_EVENTS];
+//     printf("【异步发送服务器】启动成功 port:%d\n", ports);
+
+//     // 7. 主线程事件循环
+//     while(1){
+//         // 等待事件（阻塞）
+//         int nready = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
+//         if(nready <= 0) continue;
+
+//         //遍历所有就绪事件
+//         for(int i = 0; i < nready; i++){
+//             int fd = events[i].data.fd;
+//             int ev = events[i].events;  //事件类型(读/写)
+
+//             // --------------------
+//             // 事件1：新客户端连接
+//             // --------------------
+//             if(fd == sockfd){
+//                 while(1){
+//                     sockaddr_in cli_addr;
+//                     socklen_t cli_len = sizeof(cli_addr);
+//                     int cfd = accept(sockfd, (sockaddr*)&cli_addr, &cli_len);
+//                     if(cfd < 0){
+//                         if(errno == EAGAIN) break;
+//                         continue;
+//                     }
+//                     // 新建连接，加入全局表和epoll
+//                     Connection conn;
+//                     conn.fd = cfd;
+//                     g_connections[cfd] = conn;
+//                     epollAddFd(epoll_fd, cfd);
+//                 }
+//             }
+//             // --------------------
+//             // 事件2：已连接客户端（读/写事件）
+//             // --------------------
+//             else{
+//                 bool ok = true;
+
+//                 // 🔥 处理可写事件 EPOLLOUT
+//                 if(ev & EPOLLOUT){
+//                     // 内核通知：可以发送数据了！
+//                     ok = async_write(epoll_fd, g_connections[fd]);
+//                 }
+
+//                 //处理可读事件EPOLLIN
+//                 if(ok&& (ev & EPOLLIN)){
+//                     ok = readToBuffer(epoll_fd, fd); 
+//                 }
+
+//                 //出错或断开，关闭连接
+//                 if(!ok){
+//                     closeConnection(epoll_fd, fd);
+//                 }
+//             }
+//         }
+//     }
+
+//     //永远不会走到这里
+//     close(epoll_fd);
+//     close(sockfd);
+// }
+
+// ==============================================
+// 5.0 长连接 + 心跳机制 + 超时管理 纯高并发框架
+// 无业务、无HTTP、纯底层、企业级可用
+// ==============================================
+
+// #include <stdio.h>  //输出输入：printf打印日志、perror打印系统错误
+// #include <stdlib.h> // 通用工具：内存分配、退出
+// #include <string.h> // 内存操作：memset、strlen
+// #include <unistd.h> // Unix系统调用：close、read、write
 // // Linux网络编程核心头文件
-#include <sys/socket.h> // socket、bind、listen、accept、send、recv
-#include <netinet/in.h> // sockaddr_in结构体、htons/ntohl字节序转换
-#include <fcntl.h> // fcntl：设置非阻塞模式
-#include <errno.h> // 错误码：EAGAIN、EWOULDBLOCK等
-#include <sys/epoll.h>// epoll_create1、epoll_ctl、epoll_wait
-// C++容器
-#include <unordered_map> // 哈希表：快速查找客户端连接
-#include "server.h"
+// #include <sys/socket.h>     // socket、bind、listen、accept、send、recv
+// #include <netinet/in.h>     // sockaddr_in结构体、htons/ntohl字节序转换
+// #include <fcntl.h>      //  fcntl：设置非阻塞模式
+// #include <errno.h>      // 错误码：EAGAIN、EWOULDBLOCK等
+// #include <sys/epoll.h>  // epoll_create1、epoll_ctl、epoll_wait
+// // C++容器
+// #include <unordered_map>    // 哈希表：快速查找客户端连接
+// #include <time.h>   // 时间函数
+// #include "server.h"
 
-// 宏定义
-#define MAX_EVENTS 1024   // epoll_wait最多接收多少个事件
-#define BUF_SIZE 1024   // 每次read读取的临时缓冲区大小
-#define MAX_PACKET_SIZE 65536 // 最大包长度64KB，防止攻击
+// // ===================== 宏定义 =====================
+// #define MAX_EVENTS 1024     // epoll_wait 一次最多处理多少事件
+// #define BUF_SIZE 1024   // 每次 read 读取的临时缓冲区大小
+// #define MAX_PACKET_SIZE 65536   // 最大包长度，防止恶意发包攻击
 
-// 全局哈希表：保存所有客户端连接
-// key：客户端fd
-// value：Connection结构体（包含读写缓冲区）
-static std::unordered_map<int,Connection>g_connections;
+// // 超时配置（秒）
+// #define IDLE_TIMEOUT 15 // 15秒没有任何活动 → 判定超时踢出
+// #define CHECK_INTERVAL 3    // 每3秒检查一次有没有超时连接
 
-// ==============================================
-// 函数：设置文件描述符为非阻塞模式
-// 作用：ET模式必须用非阻塞，否则会卡死
-// ==============================================
-int setnonblocking(int fd){
-    int old_flag = fcntl(fd, F_GETFL);
-    int new_flag = old_flag | O_NONBLOCK;
-    fcntl(fd, F_SETFL, new_flag);
-    return old_flag;
-}
+// // ===================== 全局变量 =====================
+// // 哈希表：保存所有客户端连接
+// // key = 文件描述符 fd
+// // value = Connection 结构体（包含读写缓冲区、最后活跃时间）
+// static std::unordered_map<int, Connection>g_connections;
+
+// // 上次检查超时的时间，避免频繁检查
+// static time_t last_check_time = 0;
 
 
-// ==============================================
-// 函数：修改epoll监听的事件（新增/移除EPOLLOUT）
-// 作用：动态控制监听读、写事件
-// ==============================================
-void epoll_mod(int epoll_fd, int fd, int events){
-    epoll_event ev;
-    ev.events = events; // 要监听的事件（EPOLLIN/EPOLLOUT）
-    ev.data.fd = fd;    // 关联的fd
-    // 调用epoll_ctl，MOD表示修改已有fd的监听事件
-    epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &ev);
-}
+// // ===================== 设置非阻塞 =====================
+// // 作用：把 socket 变成“非阻塞模式”
+// // 非阻塞 = 读不到/发不出 不会卡住，直接返回 EAGAIN
+// int setnonblocking(int fd){
+//     int old_flag = fcntl(fd, F_GETFL);  // 获取当前 fd 的状态标记
+//     int new_flag = old_flag | O_NONBLOCK;   // 添加“非阻塞”标记
+//     fcntl(fd, F_SETFL, new_flag);   // 设置新标记
+//     return old_flag;    // 返回旧标记（备用）
+// }
 
-// ==============================================
-// 函数：将fd添加到epoll监听
-// 初始只监听读事件 EPOLLIN
-// ==============================================
-void epollAddFd(int epoll_fd, int fd){
-    epoll_event ev;
-    // ET边缘触发 + 监听可读
-    ev.events = EPOLLIN | EPOLLET;
-    ev.data.fd = fd;
-    // 添加到epoll
-    epoll_ctl(epoll_fd,  EPOLL_CTL_ADD, fd, &ev);
-    //设置非阻塞
-    setnonblocking(fd);
-}
+// // ===================== 修改 epoll 监听事件 =====================
+// // 作用：动态给某个 fd 增加/移除监听事件（比如加 EPOLLOUT）
+// void epoll_mod(int epoll_fd, int fd, int events){
+//     epoll_event ev;
+//     ev.events = events; // 要监听的事件：EPOLLIN / EPOLLOUT / EPOLLET
+//     ev.data.fd = fd;    // 关联哪个客户端 fd
+//     epoll_ctl(epoll_fd, EPOLL_CTL_MOD, fd, &ev);    // 修改 epoll 监听
+// }
 
-// ==============================================
-// 协议头：1字节对齐，固定4字节长度
-// ==============================================
-#pragma pack(push, 1)
-struct PacketHeader{
-    uint32_t data_len;   // 数据体长度（必须网络字节序）
-};
-#pragma pack(pop)
+// // ===================== 添加 fd 到 epoll 监听 =====================
+// // 作用：新客户端连接上来，把它加入 epoll 监听
+// void epollAddFd(int epoll_fd, int fd){
+//     epoll_event ev;
+//     ev.events = EPOLLIN | EPOLLET;  // 初始只监听“读事件”+ ET 模式
+//     ev.data.fd = fd;
+//     epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev);    // 添加到 epoll
+//     setnonblocking(fd); // 必须设置非阻塞！
+// }
 
-// ==============================================
-// 🔥 核心函数：异步发送（真正发送数据）
-// 功能：循环把write_buf里的数据发给内核，直到发完或EAGAIN
-// ==============================================
-bool async_write(int epoll_fd, Connection& conn){
-    // 循环：只要写缓冲区不为空，就一直尝试发送
-    while(!conn.write_buf.empty()){
-        // 调用write：尝试把write_buf里所有数据写入内核
-        ssize_t n = write(
-            conn.fd,    // 客户端fd
-            conn.write_buf.data(),   // 发送队列首地址
-            conn.write_buf.size()   // 队列数据长度
-        );
-        // --------------------
-        // 情况1：成功发送了n字节
-        // --------------------
-        if(n > 0){
-            // 从队列头部删除已发送的n字节（FIFO队列）
-            conn.write_buf.erase(
-                conn.write_buf.begin(),
-                conn.write_buf.begin() + n
-            );
-        }
-         // --------------------
-        // 情况2：发送失败
-        // --------------------
-        else{
-            // errno == EAGAIN：内核发送缓冲区满了！
-            if(errno == EAGAIN || errno == EWOULDBLOCK){
-                // ------------------------------
-                // 🔥 关键：开启EPOLLOUT监听
-                // 告诉内核：等你有空了，通知我！
-                // ------------------------------
-                epoll_mod(epoll_fd, conn.fd, EPOLLIN | EPOLLET | EPOLLOUT);
-                return true;    // 不报错，只是暂时发不了
-            }
+// // ===================== 协议头（固定4字节） =====================
+// // #pragma pack(1) = 强制1字节对齐
+// // 作用：不让编译器乱加填充字节，保证包头大小永远 = 4 字节
+// #pragma pack(push, 1)
+// struct PacketHeader{
+//     uint32_t data_len;  //数据体长度(网络字节序)
+// };
+// #pragma pack(pop)
 
-            // 其他错误：连接断开、出错等
-            return false;
-        }
+// // ===================== 异步发送核心函数 =====================
+// // 功能：循环把 write_buf 队列里的数据发给客户端
+// // 发不完 → 等 EPOLLOUT
+// bool async_write(int epoll_fd, Connection& conn){
+//     // 只要写缓冲区不为空，就一直尝试发送
+//     while(!conn.write_buf.empty()){
+//             // 调用 write：把缓冲区数据往内核里写
+//             ssize_t n = write(conn.fd, conn.write_buf.data(), conn.write_buf.size());
 
-    }
-    // --------------------
-    // 走到这里：write_buf已经全部发空了
-    // --------------------
-    // 关闭EPOLLOUT！！！
-    // 因为只要缓冲区可写，EPOLLOUT会一直触发，不关掉CPU 100%
-    epoll_mod(epoll_fd, conn.fd, EPOLLIN | EPOLLET);
-    return true;
-}
+//         // =====================
+//         // 情况1：发送成功 n 字节
+//         // =====================
+//         if(n > 0){
+//             // 删除已发送的前 n 字节（队列 FIFO）
+//             conn.write_buf.erase(conn.write_buf.begin(), conn.write_buf.begin() + n);
+//             // 刷新最后活跃时间（发了消息 = 活着）
+//             conn.last_active_time = time(nullptr);
+//         }
+//         // =====================
+//         // 情况2：发送失败
+//         // =====================
+//         else{
+//             // EAGAIN / EWOULDBLOCK = 内核发送缓冲区满了！
+//             if(errno == EAGAIN || errno == EWOULDBLOCK){
+//                 // 🔥 开启 EPOLLOUT：等内核有空再通知我
+//                 epoll_mod(epoll_fd, conn.fd, EPOLLIN | EPOLLET | EPOLLOUT);
+//                 return true;    // 暂时发不了，不是错误
+//             }
 
-// ==============================================
-// 函数：将数据加入发送队列（不直接发送）
-// ==============================================
-bool add_write_queue(int epoll_fd, Connection& conn, const char* data, int len){
-    // 把要发送的数据，追加到write_buf尾部（入队）
-    conn.write_buf.insert(
-        conn.write_buf.end(),
-        data,
-        data + len
-    );
-    // 入队后，立即尝试发送
-    return async_write(epoll_fd, conn);
-}
+//             // 真正错误（客户端断开）
+//             return false;
+//         }
+//     }
+//     // =====================
+//     // 走到这里 = 全部发完了
+//     // =====================
+//     // 关闭 EPOLLOUT，避免一直触发
+//     epoll_mod(epoll_fd, conn.fd, EPOLLIN | EPOLLET);
+//     return true;
+// }
 
-// ==============================================
-// 函数：拆一个完整的包（和之前一样，只是发送改为异步）
-// ==============================================
-static bool parseOnePacket(int epoll_fd, Connection& conn){
-    // 不够读包头，返回
-    if(conn.read_buf.size() < sizeof(PacketHeader)){
-        return false;
-    }
+// // ===================== 把数据加入发送队列 =====================
+// // 作用：不直接发送，先入队，保证不丢包
+// bool add_write_queue(int epoll_fd, Connection& conn, const char*data, int len){
+//     //数据追加到write_buf 尾部
+//     conn.write_buf.insert(conn.write_buf.end(), data, data + len);
+//     // 入队后立即尝试发送
+//     return async_write(epoll_fd, conn);
+// }
 
-    // 强转包头
-    PacketHeader* header = (PacketHeader*)conn.read_buf.data();
-    // 网络字节序转主机字节序
-    uint32_t data_len = ntohl(header->data_len);
+// // ===================== 关闭连接 =====================
+// // 作用：清理资源，从 epoll 移除，关闭 fd
+// static void closeConnection(int epoll_fd, int fd){
+//     epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, nullptr);    //从epoll删除
+//     close(fd);  //关闭socket
+//     g_connections.erase(fd);    //从全局表删除
+//     printf("连接关闭: fd=%d\n", fd);
+// }
 
+// // ===================== 检查超时连接（核心） =====================
+// // 功能：遍历所有客户端，超过15秒没活动 → 踢掉
+// void check_idle_connections(int epoll_fd){
+//     time_t now = time(nullptr); //当前时间
 
-    // 非法包检查
-    if (data_len == 0 || data_len > MAX_PACKET_SIZE) {
-        printf("[错误] 非法包长度\n");
-        return false;
-    }
+//     //没到检查时间、直接返回(每3秒检查一次)
+//     if(now - last_check_time < CHECK_INTERVAL)
+//         return;
+    
+//     //更新最后检查时间
+//     last_check_time = now;
 
-    // 总长度 = 包头4字节 + 数据长度
-    uint32_t total_len = sizeof(PacketHeader) + data_len;
-    // 不够一个完整包，返回
-    if(conn.read_buf.size() < total_len)
-        return false;
+//     //遍历所有连接
+//     auto it = g_connections.begin();
+//     while(it != g_connections.end()){
+//         // 判断：当前时间 - 最后活跃时间 > 15秒
+//         if(now - it->second.last_active_time > IDLE_TIMEOUT){
+//             printf("连接超时踢出: fd=%d\n", it->first);
+//             closeConnection(epoll_fd, it->first);       // 关闭超时连接
+//         }
+//         ++it;   //继续下一个检查
+//     }
+// }
 
-    // 数据指针：跳过包头
-    char *data_ptr = conn.read_buf.data() + sizeof(PacketHeader);
+// // ===================== 拆包函数（心跳+普通消息） =====================
+// // 功能：从 read_buf 里拆出一个完整的数据包
+// static bool parseOnePacket(int epoll_fd, Connection& conn){
+//     //缓冲区不够读包头(4字节), 返回false
+//     if(conn.read_buf.size() < sizeof(PacketHeader))
+//         return false;
+    
+//     //把缓冲区前4个字节强转成包头结构体
+//     PacketHeader* header = (PacketHeader*)conn.read_buf.data();
+//     //网络字节序->本机字节序
+//     uint32_t data_len = ntohl(header->data_len);
 
+//     // 非法包：长度为0 或 太长
+//     if(data_len == 0 || data_len > MAX_PACKET_SIZE)
+//         return false;
 
-    // ======================
-    // 🔥 关键修改：不再直接write
-    // 改为：加入发送队列，异步发送
-    // ======================
-    if(!add_write_queue(epoll_fd, conn, data_ptr, data_len)){
-        return false;
-    }
+//     // 一个完整包总长度 = 包头4字节 + 数据长度
+//     uint32_t total_len = sizeof(PacketHeader) + data_len;
 
-    printf("[成功拆包&异步发送] fd=%d 长度=%u\n", conn.fd, data_len);
+//     //缓冲区不够一个完整包,返回
+//     if(conn.read_buf.size() < total_len)
+//         return false;
 
-    // 移除已处理的数据包
-    conn.read_buf.erase(
-        conn.read_buf.begin(),
-        conn.read_buf.begin() + total_len
-    );
-    return true;
-}
+//     //数据指针 = 包头之后的位置
+//     char * data_ptr = conn.read_buf.data() + sizeof(PacketHeader);
 
-
-// ==============================================
-// 函数：ET模式循环读取数据到读缓冲区
-// ==============================================
-static bool readToBuffer(int epoll_fd, int fd){
-    // 找到当前连接
-    auto it = g_connections.find(fd);
-    if(it == g_connections.end()) return false;
-
-    //临时数组
-    char tmp[BUF_SIZE];
-
-    //循环读，直到EAGAIN
-    while(1){
-        ssize_t n = read(fd, tmp, BUF_SIZE);
-        if(n > 0){
-            // 读到数据，追加到read_buf
-            it->second.read_buf.insert(it->second.read_buf.end(), tmp, tmp + n);
-        }else if(n == 0){
-            //客户端关闭连接
-            return false;
-        }else{
-            //无数据了，退出循环
-            if(errno == EAGAIN || errno == EWOULDBLOCK) break;
-            //其他错误
-            return false;
-        }
-    }
-
-    //循环拆包（处理粘包）
-    while(parseOnePacket(epoll_fd, it->second));
-    return true;
-}
-
-// ==============================================
-// 函数：关闭连接并清理资源
-// ==============================================
-static void closeConnection(int epoll_fd, int fd){
-    epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, nullptr);
-    close(fd);
-    g_connections.erase(fd);
-}
-
-// ==============================================
-// 主函数：服务器启动入口
-// ==============================================
-void runServer(uint16_t ports){
-    // 1. 创建TCP socket
-    int sockfd = socket(PF_INET, SOCK_STREAM, 0);
-    if(sockfd < 0){
-        perror("socket"); return;
-    }
-
-    // 2. 设置端口复用
-    int opt = 1;
-    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt));
+//     // =====================
+//     // 心跳包判断
+//     // 长度=9，内容=heartbeat
+//     // =====================
+//     if(data_len == 9 && memcmp(data_ptr,"heartbeat", 9) == 0){
+//         printf("fd=%d 心跳包\n", conn.fd);
+//         conn.last_active_time = time(nullptr);  //刷新活跃时间
+//     }
+//     // =====================
+//     // 普通消息：回显
+//     // =====================
+//     else{
+//         add_write_queue(epoll_fd, conn, data_ptr, data_len);
+//     }
 
 
-    // 3. 绑定IP和端口
-    sockaddr_in addr;
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = htons(ports);
+//     //把已处理的包从缓冲区删除
+//     conn.read_buf.erase(conn.read_buf.begin(), conn.read_buf.begin() + total_len);
+//     return true;
+// }
 
-    if(bind(sockfd, (sockaddr*)&addr, sizeof(addr)) < 0){
-        perror("bind"); close(sockfd); return;
-    }
+// // ===================== 读取客户端数据 =====================
+// // ET模式：循环读，直到 EAGAIN
+// static bool readToBuffer(int epoll_fd, int fd){
+//     // 找到这个客户端的连接信息
+//     auto it = g_connections.find(fd);
+//     if(it == g_connections.end()) return false;
 
-    // 4. 监听
-    if(listen(sockfd, 100) < 0){
-        perror("listen"); close(sockfd); return;
-    }
+//     //临时缓冲区
+//     char tmp[BUF_SIZE];
 
-    // 5. 创建epoll
-    int epoll_fd = epoll_create1(0);
-    if(epoll_fd < 0){
-        perror("epoll"); close(sockfd); return;
-    }
+//     //循环读取
+//     while(1){
+//         ssize_t n = read(fd, tmp, BUF_SIZE);
 
-    // 6. 监听socket加入epoll
-    epollAddFd(epoll_fd, sockfd);
+//         // =====================
+//         // 读到数据
+//         // =====================
+//         if(n > 0){
+//             //数据追加到读缓冲区
+//             it->second.read_buf.insert(it->second.read_buf.end(), tmp, tmp + n);
+//             //刷新活跃时间(收到消息 = 活着)
+//             it->second.last_active_time = time(nullptr);
+//         }
+//         // =====================
+//         // 客户端主动关闭
+//         // =====================
+//         else if(n == 0){
+//             return false;
+//         }
+//         // =====================
+//         // 读空了（EAGAIN）或错误
+//         // =====================
+//         else{
+//             if(errno == EAGAIN || errno == EWOULDBLOCK)
+//                 break;  // 数据读完了
+//             return false;       //真正错误
+//         }
+//     }
 
-    epoll_event events[MAX_EVENTS];
-    printf("【异步发送服务器】启动成功 port:%d\n", ports);
+//     //循环拆包(处理粘包)
+//     while(parseOnePacket(epoll_fd, it->second));
+//     return true;
 
-    // 7. 主线程事件循环
-    while(1){
-        // 等待事件（阻塞）
-        int nready = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
-        if(nready <= 0) continue;
+// }
 
-        //遍历所有就绪事件
-        for(int i = 0; i < nready; i++){
-            int fd = events[i].data.fd;
-            int ev = events[i].events;  //事件类型(读/写)
+// // ===================== 服务器主函数 =====================
 
-            // --------------------
-            // 事件1：新客户端连接
-            // --------------------
-            if(fd == sockfd){
-                while(1){
-                    sockaddr_in cli_addr;
-                    socklen_t cli_len = sizeof(cli_addr);
-                    int cfd = accept(sockfd, (sockaddr*)&cli_addr, &cli_len);
-                    if(cfd < 0){
-                        if(errno == EAGAIN) break;
-                        continue;
-                    }
-                    // 新建连接，加入全局表和epoll
-                    Connection conn;
-                    conn.fd = cfd;
-                    g_connections[cfd] = conn;
-                    epollAddFd(epoll_fd, cfd);
-                }
-            }
-            // --------------------
-            // 事件2：已连接客户端（读/写事件）
-            // --------------------
-            else{
-                bool ok = true;
+// void runServer(uint16_t ports){
+//     // 1. 创建 TCP socket
+//     int sockfd = socket(PF_INET, SOCK_STREAM, 0);
+//     if(sockfd < 0){
+//         perror("socket");
+//         return;
+//     }
 
-                // 🔥 处理可写事件 EPOLLOUT
-                if(ev & EPOLLOUT){
-                    // 内核通知：可以发送数据了！
-                    ok = async_write(epoll_fd, g_connections[fd]);
-                }
+//     //2.设置端口复用(重启不报错)
+//     int opt = 1;
+//     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt));
 
-                //处理可读事件EPOLLIN
-                if(ok&& (ev & EPOLLIN)){
-                    ok = readToBuffer(epoll_fd, fd); 
-                }
+//     //3.绑定ip + 端口
+//     sockaddr_in addr;
+//     addr.sin_family = AF_INET;
+//     addr.sin_addr.s_addr = INADDR_ANY;
+//     addr.sin_port = htons(ports);
 
-                //出错或断开，关闭连接
-                if(!ok){
-                    closeConnection(epoll_fd, fd);
-                }
-            }
-        }
-    }
+//     if(bind(sockfd, (sockaddr*)&addr, sizeof(addr)) < 0){
+//         perror("bind");
+//         close(sockfd);
+//         return ;
+//     }
 
-    //永远不会走到这里
-    close(epoll_fd);
-    close(sockfd);
-}
+//     //4.监听终端
+//     if(listen(sockfd, 1024) < 0){
+//         perror("listen");
+//         close(sockfd);
+//         return ;
+//     }
+
+//     //5.创建epoll实例
+//     int epoll_fd = epoll_create1(0);
+//     if(epoll_fd < 0){
+//         perror("listen");
+//         close(sockfd);
+//         return;
+//     }
+
+//     //6.把监听socket加入epoll
+//     epollAddFd(epoll_fd, sockfd);
+
+//     // 事件数组，接收 epoll 回来的事件
+//     epoll_event events[MAX_EVENTS];
+//     last_check_time = time(nullptr);    //初始化超时检查时间
+
+//     printf("【长连接+心跳+超时】服务器启动 port:%d\n", ports);
+
+
+//     // =====================
+//     // 主线程死循环：事件驱动
+//     // =====================
+//     while(1){
+//         // epoll_wait 等待事件
+//         // 超时 1000ms = 1秒
+//         int nready = epoll_wait(epoll_fd, events, MAX_EVENTS, 1000);
+
+//         //每次循环都检查超时连接
+//         check_idle_connections(epoll_fd);
+
+//         if(nready <= 0) continue;
+
+//         //遍历所有就绪事件
+//         for(int i = 0; i < nready; i++){
+//             int fd = events[i].data.fd;
+//             int ev = events[i].events;
+
+//             // =====================
+//             // 事件1：新客户端连接
+//             // =====================
+//             if(fd == sockfd){
+//                 while(1){
+//                     struct sockaddr_in cli_addr;
+//                     socklen_t cli_len = sizeof(cli_addr);
+//                     int cfd = accept(sockfd, (struct sockaddr*)&cli_addr, &cli_len);
+
+//                     if(cfd < 0){
+//                         if(errno == EAGAIN) break;
+//                         continue;
+//                     }
+
+//                     //新建连接结构体
+//                     Connection conn;
+//                     conn.fd = cfd;
+//                     conn.last_active_time = time(nullptr);  //初始化活跃时间
+
+//                     //加入全局表+ epoll
+//                     g_connections[cfd] = conn;
+//                     epollAddFd(epoll_fd, cfd);
+//                     printf("新连接: fd=%d\n", cfd);
+//                 }
+//             }
+//             // =====================
+//             // 事件2：已连接客户端（读/写事件）
+//             // =====================
+//             else{
+//                 bool ok = true;
+
+//                 // 可写事件：内核有空，可以发送数据
+//                 if(ev & EPOLLOUT){
+//                     ok = async_write(epoll_fd, g_connections[fd]);
+//                 }
+
+//                 // 可读事件：客户端发消息来了
+//                 if(ok && (ev & EPOLLIN)){
+//                     ok = readToBuffer(epoll_fd, fd);
+//                 }
+
+//                 //出错或断开->关闭连接
+//                 if(!ok){
+//                     closeConnection(epoll_fd, fd);
+//                 }
+//             }
+//         }
+//     }
+
+//     //不会执行到这里
+//     close(epoll_fd);
+//     close(sockfd);
+// }

@@ -24,8 +24,9 @@
 
 struct Connection{
     int fd = -1;
-    std::vector<char> read_buf;
-    std::vector<char> write_buf;
+    std::vector<char> read_buf; // 读缓冲区
+    std::vector<char> write_buf; // 写缓冲区
+    time_t last_active_time;    //最后活跃时间(心跳/超时用)
 };
 
 //启动服务器
