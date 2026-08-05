@@ -6,5 +6,5 @@ CXX_FLAGS =   -pthread -std=gnu++11
 
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/home/qianzhu/test/tinywebserver/include 
+CXX_INCLUDES = -I/home/qianzhu/mytinywebserver/include 
 

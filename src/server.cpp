@@ -1888,3 +1888,205 @@
 //     close(epoll_fd);
 //     close(sockfd);
 // }
+
+// ==============================================
+// 6.0 版本：主 Reactor + 线程池分发
+// 主线程只负责 accept 新连接，然后分发给 Worker 线程池
+// 客户端连接的读写处理全部由 Worker 完成
+// ==============================================
+
+#include <stdio.h>          // printf, perror
+#include <stdlib.h>         // exit
+#include <string.h>         // memset, memcmp
+#include <unistd.h>         // close, read, write
+#include <fcntl.h>          // fcntl: F_GETFL, F_SETFL, O_NONBLOCK
+#include <errno.h>          // errno, EAGAIN, EWOULDBLOCK
+#include <sys/socket.h>     // socket, bind, listen, accept, setsockopt
+#include <netinet/in.h>     // sockaddr_in, AF_INET, INADDR_ANY, htons
+#include <sys/epoll.h>      // epoll_create1, epoll_ctl, epoll_wait, epoll_event
+
+#include "server.h"         // 引入宏定义：MAX_EVENTS, BUF_SIZE 等
+#include "threadpool.h"     // ThreadPool 类
+#include "connection.h"     // Connection 结构体
+
+// 全局线程池指针（供主线程使用）
+static ThreadPool* g_thread_pool = nullptr;
+
+// ==================== 设置非阻塞 ====================
+// 通用工具函数，被 5.0 和 6.0 版本共用
+int setnonblocking(int fd)
+{
+    // 获取当前 fd 的状态标记
+    int old_flag = fcntl(fd, F_GETFL);
+    // 在原状态基础上添加非阻塞标记
+    int new_flag = old_flag | O_NONBLOCK;
+    // 设置新状态
+    fcntl(fd, F_SETFL, new_flag);
+    // 返回旧标记（方便恢复原状态时使用）
+    return old_flag;
+}
+
+// ==================== 添加 fd 到 epoll ====================
+// 通用工具函数，被 5.0 和 6.0 版本共用
+void epollAddFd(int epoll_fd, int fd)
+{
+    // 定义 epoll 事件结构体
+    epoll_event ev;
+    // 设置监听可读事件 + ET 边缘触发模式
+    ev.events = EPOLLIN | EPOLLET;
+    // 存储 fd 标识（epoll 触发事件时会返回这个值）
+    ev.data.fd = fd;
+    // 调用 epoll_ctl 将 fd 添加到 epoll 监听列表
+    epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev);
+    // 设置非阻塞（ET 模式必须用非阻塞 socket）
+    setnonblocking(fd);
+}
+
+// ==================== 6.0 主服务器函数 ====================
+void runServer6_0(uint16_t ports)
+{
+    // ====================
+    // 第1步：创建 TCP 监听 socket
+    // ====================
+    int sockfd = socket(PF_INET, SOCK_STREAM, 0);
+    if(sockfd < 0)
+    {
+        perror("socket 创建失败");
+        return;
+    }
+
+    // 设置端口复用（服务器重启后可以立刻绑定端口）
+    int opt = 1;
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt));
+
+    // ====================
+    // 第2步：绑定 IP + 端口
+    // ====================
+    sockaddr_in addr;
+    addr.sin_family = AF_INET;   // IPv4
+    addr.sin_addr.s_addr = INADDR_ANY;  // 绑定所有网卡
+    addr.sin_port = htons(ports);   // 端口转网络字节序
+    
+    if(bind(sockfd, (sockaddr*)&addr, sizeof(addr)) < 0)
+    {
+        perror("bind 绑定失败");
+        close(sockfd);
+        return;
+    }
+
+    // ====================
+    // 第3步：开始监听
+    // ====================
+    if(listen(sockfd, 1024) < 0)
+    {
+        perror("listen 监听失败");
+        close(sockfd);
+        return;
+    }
+
+    // ====================
+    // 第4步：创建主线程的 epoll
+    // 主线程的 epoll 只监听 listen fd
+    // ====================
+    int epoll_fd = epoll_create1(0);
+    if(epoll_fd < 0)
+    {
+        perror("epoll_create1 失败");
+        close(sockfd);
+        return;
+    }
+
+    // ====================
+    // 第5步：将监听 socket 加入 epoll
+    // ====================
+    epoll_event listen_ev;
+    listen_ev.events = EPOLLIN | EPOLLET;   // 只读 + ET 模式
+    listen_ev.data.fd = sockfd;
+    epoll_ctl(epoll_fd, EPOLL_CTL_ADD, sockfd, &listen_ev);
+
+    // ====================
+    // 第6步：创建并启动线程池
+    // ====================
+    g_thread_pool = new ThreadPool(4);  // 创建 4 个 Worker
+    g_thread_pool->start();     // 启动所有 Worker
+
+    // ====================
+    // 第7步：主事件循环（Reactor 模式）
+    // 主线程只做三件事：
+    //   1. 等待新连接
+    //   2. accept 接收新连接
+    //   3. 将连接分发给 Worker
+    // ====================
+    epoll_event events[MAX_EVENTS];
+    printf("\n");
+    printf("========================================\n");
+    printf("【6.0 多线程版本】服务器启动\n");
+    printf("端口: %d\n", ports);
+    printf("Worker 数量: 4\n");
+    printf("架构: 主 Reactor + Worker 线程池\n");
+    printf("========================================\n\n");
+
+    while(1){
+        // 阻塞等待事件（-1 表示无限等待）
+        int nready = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
+
+        if(nready < 0) continue;
+
+
+        // 遍历所有就绪事件
+        // 在 6.0 版本中，主线程只会收到 listen fd 的事件
+        // 客户端连接的事件全部由 Worker 处理
+        for(int i = 0; i < nready; i++)
+        {
+            int fd = events[i].data.fd;
+
+            //只有listen fd会触发事件
+            if(fd == sockfd)
+            {
+                // ====================
+                // ET 模式必须循环 accept
+                // 直到返回 EAGAIN 为止
+                // ====================
+                while(1){
+                    sockaddr_in cli_addr;   // 客户端地址
+                    socklen_t cli_len = sizeof(cli_addr);
+
+                    // 接受一个新连接
+                    int cfd = accept(sockfd, (sockaddr*)&cli_addr, &cli_len);
+
+                    if(cfd< 0)
+                    {
+                        if(errno == EAGAIN){
+                            break;  //没有更多连接了，正常退出
+                        }
+                        //其他错误，继续尝试（不break）
+                        continue;
+                    }
+
+                    //新连接成功
+                    printf("accept新连接: fd=%d\n", cfd);
+
+                    // ====================
+                    // 关键步骤：分发给 Worker
+                    // ====================
+                    // 1. 主线程设置非阻塞
+                    setnonblocking(cfd);
+
+                    // 2. 通过线程池分发给某个 Worker
+                    // Worker 会自己设置 epoll 监听
+                    g_thread_pool->distributeConnection(cfd);
+                }
+            }
+        }
+    }
+
+    // ====================
+    // 清理资源（理论上不会走到这里）
+    // ====================
+    printf("\n服务器关闭...\n");
+    g_thread_pool->stop();  // 停止线程池
+    delete g_thread_pool;   // 释放线程池内存
+    g_thread_pool = nullptr;
+    close(epoll_fd);    // 关闭 epoll
+    close(sockfd);  // 关闭监听 socket
+}

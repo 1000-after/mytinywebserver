@@ -1,42 +1,79 @@
-//实现基础的网络连接
+// //实现基础的网络连接
+// #ifndef SERVER_H
+// #define SERVER_H
+
+// //1.0
+// // //服务端主逻辑（socket + bind + listen + accept）
+// // #include <sys/types.h>
+// // void runServer(uint16_t ports);
+
+
+// // //新增设置非阻塞函数
+// // int setnoblocking(int fd);
+
+// //2.0
+// #include <cstdint>  //uint16_t
+// #include <sys/epoll.h>
+// #include <vector>   //c++动态数组
+
+
+// // =========================================
+// // 每个客户端连接的数据结构（最简单，小白专用）
+// // 作用：存储 fd + 读缓冲区（解决粘包/半包）
+// // =========================================
+
+// struct Connection{
+//     int fd = -1;
+//     std::vector<char> read_buf; // 读缓冲区
+//     std::vector<char> write_buf; // 写缓冲区
+//     time_t last_active_time;    //最后活跃时间(心跳/超时用)
+// };
+
+// //启动服务器
+// void runServer(uint16_t ports);
+
+// //设置非阻塞
+// int setnonblocking(int fd);
+
+// //添加fd 到epoll
+// void epollAddFd(int epoll_fd, int fd);
+
+
+// #endif
+
+
+//6.0版本
 #ifndef SERVER_H
 #define SERVER_H
 
-//1.0
-// //服务端主逻辑（socket + bind + listen + accept）
-// #include <sys/types.h>
-// void runServer(uint16_t ports);
+#include <cstdint>   // uint16_t
 
-
-// //新增设置非阻塞函数
-// int setnoblocking(int fd);
-
-//2.0
-#include <cstdint>  //uint16_t
-#include <sys/epoll.h>
-#include <vector>   //c++动态数组
-
-
-// =========================================
-// 每个客户端连接的数据结构（最简单，小白专用）
-// 作用：存储 fd + 读缓冲区（解决粘包/半包）
-// =========================================
-
-struct Connection{
-    int fd = -1;
-    std::vector<char> read_buf; // 读缓冲区
-    std::vector<char> write_buf; // 写缓冲区
-    time_t last_active_time;    //最后活跃时间(心跳/超时用)
-};
-
-//启动服务器
-void runServer(uint16_t ports);
-
-//设置非阻塞
+// ==================== 通用工具函数 ====================
+// 设置非阻塞
 int setnonblocking(int fd);
 
-//添加fd 到epoll
+// 添加 fd 到 epoll
 void epollAddFd(int epoll_fd, int fd);
 
+// 启动服务器（5.0 版本）
+void runServer(uint16_t ports);
+
+// 启动服务器（6.0 多线程版本）
+void runServer6_0(uint16_t ports);
+
+
+// ==================== 协议相关常量 ====================
+#define MAX_EVENTS 1024 // epoll_wait 一次最多处理的事件数
+#define BUF_SIZE 1024   // 每次 read 读取的临时缓冲区大小
+#define MAX_PACKET_SIZE 65536       // 最大包长度（64KB）
+#define IDLE_TIMEOUT 15 // 超时时间（秒）
+#define CHECK_INTERVAL 3 // 超时检查间隔（秒）
+
+// ==================== 协议头（固定 4 字节）====================
+#pragma pack(push, 1)
+struct PacketHeader{
+    uint32_t data_len;  // 数据体长度（网络字节序）
+};
+#pragma pack(pop)
 
 #endif

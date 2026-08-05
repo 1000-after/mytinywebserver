@@ -4,6 +4,19 @@
 CMakeFiles/TinyWebServer.dir/src/main.cpp.o: ../include/server.h
 CMakeFiles/TinyWebServer.dir/src/main.cpp.o: ../src/main.cpp
 
+CMakeFiles/TinyWebServer.dir/src/server.cpp.o: ../include/connection.h
 CMakeFiles/TinyWebServer.dir/src/server.cpp.o: ../include/server.h
+CMakeFiles/TinyWebServer.dir/src/server.cpp.o: ../include/threadpool.h
+CMakeFiles/TinyWebServer.dir/src/server.cpp.o: ../include/worker.h
 CMakeFiles/TinyWebServer.dir/src/server.cpp.o: ../src/server.cpp
+
+CMakeFiles/TinyWebServer.dir/src/threadpool.cpp.o: ../include/connection.h
+CMakeFiles/TinyWebServer.dir/src/threadpool.cpp.o: ../include/threadpool.h
+CMakeFiles/TinyWebServer.dir/src/threadpool.cpp.o: ../include/worker.h
+CMakeFiles/TinyWebServer.dir/src/threadpool.cpp.o: ../src/threadpool.cpp
+
+CMakeFiles/TinyWebServer.dir/src/worker.cpp.o: ../include/connection.h
+CMakeFiles/TinyWebServer.dir/src/worker.cpp.o: ../include/server.h
+CMakeFiles/TinyWebServer.dir/src/worker.cpp.o: ../include/worker.h
+CMakeFiles/TinyWebServer.dir/src/worker.cpp.o: ../src/worker.cpp
 

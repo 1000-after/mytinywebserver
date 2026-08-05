@@ -4,8 +4,10 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "/home/qianzhu/test/tinywebserver/src/main.cpp" "/home/qianzhu/test/tinywebserver/build/CMakeFiles/TinyWebServer.dir/src/main.cpp.o"
-  "/home/qianzhu/test/tinywebserver/src/server.cpp" "/home/qianzhu/test/tinywebserver/build/CMakeFiles/TinyWebServer.dir/src/server.cpp.o"
+  "/home/qianzhu/mytinywebserver/src/main.cpp" "/home/qianzhu/mytinywebserver/build/CMakeFiles/TinyWebServer.dir/src/main.cpp.o"
+  "/home/qianzhu/mytinywebserver/src/server.cpp" "/home/qianzhu/mytinywebserver/build/CMakeFiles/TinyWebServer.dir/src/server.cpp.o"
+  "/home/qianzhu/mytinywebserver/src/threadpool.cpp" "/home/qianzhu/mytinywebserver/build/CMakeFiles/TinyWebServer.dir/src/threadpool.cpp.o"
+  "/home/qianzhu/mytinywebserver/src/worker.cpp" "/home/qianzhu/mytinywebserver/build/CMakeFiles/TinyWebServer.dir/src/worker.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 

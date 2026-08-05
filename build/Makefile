@@ -48,10 +48,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/qianzhu/test/tinywebserver
+CMAKE_SOURCE_DIR = /home/qianzhu/mytinywebserver
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/qianzhu/test/tinywebserver/build
+CMAKE_BINARY_DIR = /home/qianzhu/mytinywebserver/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -80,9 +80,9 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/qianzhu/test/tinywebserver/build/CMakeFiles /home/qianzhu/test/tinywebserver/build/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/qianzhu/mytinywebserver/build/CMakeFiles /home/qianzhu/mytinywebserver/build/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/qianzhu/test/tinywebserver/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/qianzhu/mytinywebserver/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -217,6 +217,60 @@ src/tester.cpp.s:
 	$(MAKE) -f CMakeFiles/tester.dir/build.make CMakeFiles/tester.dir/src/tester.cpp.s
 .PHONY : src/tester.cpp.s
 
+src/threadpool.o: src/threadpool.cpp.o
+
+.PHONY : src/threadpool.o
+
+# target to build an object file
+src/threadpool.cpp.o:
+	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/threadpool.cpp.o
+.PHONY : src/threadpool.cpp.o
+
+src/threadpool.i: src/threadpool.cpp.i
+
+.PHONY : src/threadpool.i
+
+# target to preprocess a source file
+src/threadpool.cpp.i:
+	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/threadpool.cpp.i
+.PHONY : src/threadpool.cpp.i
+
+src/threadpool.s: src/threadpool.cpp.s
+
+.PHONY : src/threadpool.s
+
+# target to generate assembly for a file
+src/threadpool.cpp.s:
+	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/threadpool.cpp.s
+.PHONY : src/threadpool.cpp.s
+
+src/worker.o: src/worker.cpp.o
+
+.PHONY : src/worker.o
+
+# target to build an object file
+src/worker.cpp.o:
+	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/worker.cpp.o
+.PHONY : src/worker.cpp.o
+
+src/worker.i: src/worker.cpp.i
+
+.PHONY : src/worker.i
+
+# target to preprocess a source file
+src/worker.cpp.i:
+	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/worker.cpp.i
+.PHONY : src/worker.cpp.i
+
+src/worker.s: src/worker.cpp.s
+
+.PHONY : src/worker.s
+
+# target to generate assembly for a file
+src/worker.cpp.s:
+	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/worker.cpp.s
+.PHONY : src/worker.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -236,6 +290,12 @@ help:
 	@echo "... src/tester.o"
 	@echo "... src/tester.i"
 	@echo "... src/tester.s"
+	@echo "... src/threadpool.o"
+	@echo "... src/threadpool.i"
+	@echo "... src/threadpool.s"
+	@echo "... src/worker.o"
+	@echo "... src/worker.i"
+	@echo "... src/worker.s"
 .PHONY : help
 
 
