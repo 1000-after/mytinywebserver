@@ -231,6 +231,33 @@ src/threadpool.cpp.s:
 	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/threadpool.cpp.s
 .PHONY : src/threadpool.cpp.s
 
+src/timer_wheel.o: src/timer_wheel.cpp.o
+
+.PHONY : src/timer_wheel.o
+
+# target to build an object file
+src/timer_wheel.cpp.o:
+	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/timer_wheel.cpp.o
+.PHONY : src/timer_wheel.cpp.o
+
+src/timer_wheel.i: src/timer_wheel.cpp.i
+
+.PHONY : src/timer_wheel.i
+
+# target to preprocess a source file
+src/timer_wheel.cpp.i:
+	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/timer_wheel.cpp.i
+.PHONY : src/timer_wheel.cpp.i
+
+src/timer_wheel.s: src/timer_wheel.cpp.s
+
+.PHONY : src/timer_wheel.s
+
+# target to generate assembly for a file
+src/timer_wheel.cpp.s:
+	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/timer_wheel.cpp.s
+.PHONY : src/timer_wheel.cpp.s
+
 src/worker.o: src/worker.cpp.o
 
 .PHONY : src/worker.o
@@ -279,6 +306,9 @@ help:
 	@echo "... src/threadpool.o"
 	@echo "... src/threadpool.i"
 	@echo "... src/threadpool.s"
+	@echo "... src/timer_wheel.o"
+	@echo "... src/timer_wheel.i"
+	@echo "... src/timer_wheel.s"
 	@echo "... src/worker.o"
 	@echo "... src/worker.i"
 	@echo "... src/worker.s"

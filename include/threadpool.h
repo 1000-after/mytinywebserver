@@ -19,6 +19,11 @@ class ThreadPool{
         // 分发明连接到某个 Worker（Round-Robin 策略）
         void distributeConnection(int fd);
 
+        // 🆕 给 TimerWheel 回调调用：
+        //   遍历所有 Worker，让持有 fd 的那个 Worker 关闭连接
+        //   找到并关闭返回 true，找不到返回 false
+        bool tryCloseConnectionOnAnyWorker(int fd);
+
     private:
         std::vector<Worker*> workers_;      // Worker 数组
         int worker_count_;      // Worker 数量

@@ -2119,7 +2119,8 @@
 #include "server.h"
 #include "threadpool.h"
 #include "connection.h"
-#include "logger.h"  // 🆕 引入日志系统
+#include "logger.h"       // 🆕 引入日志系统
+#include "timer_wheel.h"    // 🆕 引入全局时间轮
 
 // 全局线程池指针（供主线程使用）
 static ThreadPool* g_thread_pool = nullptr;
@@ -2221,6 +2222,19 @@ void runServer6_0(uint16_t ports)
     // ====================
     g_thread_pool = new ThreadPool(4);  // 创建 4 个 Worker
     g_thread_pool->start();     // 启动所有 Worker
+
+    // ====================
+    // 🆕 注册时间轮超时回调
+    //   说明：TimerWheel 滴答线程每秒扫一次槽
+    //   发现 15 秒没动过的 fd，就回调这个 lambda
+    //   回调里让线程池把 fd 路由到持有它的 Worker，由 Worker 安全地 erase+close
+    // ====================
+    TimerWheel::instance().setCallback([](int fd) {
+        if(g_thread_pool != nullptr) {
+            g_thread_pool->tryCloseConnectionOnAnyWorker(fd);
+        }
+    });
+    LOG_INFO("TimerWheel: 超时回调已注册（15s 无数据自动关连接）");
 
     // ====================
     // 第7步：主事件循环（Reactor 模式）

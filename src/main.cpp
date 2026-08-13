@@ -36,7 +36,8 @@
 // =========================================
 #include <iostream>
 #include "server.h"
-#include "logger.h"  // 🆕 引入日志系统
+#include "logger.h"       // 🆕 引入日志系统
+#include "timer_wheel.h"    // 🆕 引入全局时间轮
 
 int main() {
     // 🆕 初始化日志系统
@@ -46,6 +47,9 @@ int main() {
     log_config.file_path = "./logs/server.log";  // 日志文件路径
     Logger::instance().init(log_config);
 
+    // 🆕 初始化全局时间轮（启动后台滴答线程）
+    TimerWheel::instance().init();
+
     LOG_INFO("========================================");
     LOG_INFO("  TinyWebServer 学习项目 - 6.1 HTTP版");
     LOG_INFO("========================================");
@@ -53,6 +57,9 @@ int main() {
     // 选择服务器版本
     // runServer(8080);      // 5.0 版本：单 Reactor
     runServer6_0(8080);     // 6.0 版本：多 Reactor + 线程池
+
+    // 🆕 关闭全局时间轮（先停滴答线程，再停日志）
+    TimerWheel::instance().shutdown();
 
     // 关闭日志系统
     Logger::instance().shutdown();

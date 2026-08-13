@@ -955,7 +955,8 @@
 
 #include "worker.h"
 #include "server.h"
-#include "logger.h"  // 🆕 引入日志系统
+#include "logger.h"      // 🆕 引入日志系统
+#include "timer_wheel.h"   // 🆕 引入全局时间轮（连接超时管理）
 
 // ==================== 构造函数 ====================
 Worker::Worker():epoll_fd_(-1), // 初始化 epoll 为 -1（表示无效）
@@ -1048,10 +1049,9 @@ void Worker::loop()
     // 用于接收 epoll 事件的数组
     epoll_event events[MAX_EVENTS];
 
-    // 初始化超时检查时间
-    time_t last_check = time(nullptr);
-
     // 循环等待事件，直到 running_ 变为 false
+    // 🟢 注意：原 last_check + 3s 全表遍历 checkTimeout 已移除
+    //    改由全局 TimerWheel 后台滴答线程统一做超时管理
     while(running_)
     {
         // 等待事件（超时 100ms）
@@ -1127,6 +1127,7 @@ void Worker::loop()
                     auto it3 = connections_.find(fd);
                     if(it3 != connections_.end())
                     {
+                        TimerWheel::instance().removeConnection(fd);   // 🟢 [接入点 4] 主动关 → 从时间轮移除
                         epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, nullptr);
                         connections_.erase(it3);
                     }
@@ -1140,22 +1141,16 @@ void Worker::loop()
             }
         }
 
-        // 定期检查超时连接
-        time_t now = time(nullptr);
-        if(now - last_check >= CHECK_INTERVAL)
-        {
-            last_check = now;
-            {
-                std::lock_guard<std::mutex> lock(mutex_);
-                checkTimeout(); // 检查是否有连接超时
-            }
-        }
+        // 🟢 [接入点 5] 旧的 3s 全表遍历 checkTimeout 已移除
+        //   改由全局 TimerWheel 后台滴答线程 1s 粒度统一检测
+        //   超时 → setCallback → ThreadPool::tryCloseConnectionOnAnyWorker → 具体 Worker 关 fd
     }
 
     // Worker 退出前，清理所有连接
     // 遍历连接表，逐一关闭
     for(auto& pair : connections_)
     {
+        TimerWheel::instance().removeConnection(pair.first);   // 🟢 [接入点 6] 退出时批量从时间轮移除
         epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, pair.first, nullptr);
         close(pair.first);
     }
@@ -1188,6 +1183,9 @@ void Worker::addConnection(int fd)
         ev.data.fd = fd;
         epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &ev);
 
+        // 🟢 [接入点 1] 新连接加入时间轮（15 秒超时）
+        TimerWheel::instance().addConnection(fd);
+
         // 锁在这里自动释放（作用域结束）
     }
 
@@ -1195,7 +1193,40 @@ void Worker::addConnection(int fd)
     uint64_t notify_val = 1;
     write(notify_fd_, &notify_val, sizeof(notify_val));
 
-    printf("Worker 收到新连接: fd=%d\n", fd);
+    LOG_INFO("Worker 收到新连接: fd=%d", fd);
+}
+
+// ==================== 🆕 TimerWheel 回调：尝试关闭连接 ====================
+// 说明：调用方（时间轮滴答线程）不知道 fd 归哪个 Worker 管
+//       所以让 ThreadPool 轮询所有 Worker 都调一次本函数
+//       只有 fd 实际在本 Worker 连接表里的那个才会真正关它
+bool Worker::tryCloseConnection(int fd)
+{
+    bool do_close_fd = false;
+
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        auto it = connections_.find(fd);
+        if(it == connections_.end()) return false;  // 不属于本 Worker，直接返回
+
+        // 1) 先把这个 fd 从时间轮里移除（已经超时了，避免重复回调）
+        TimerWheel::instance().removeConnection(fd);
+
+        // 2) 从 epoll 移除
+        epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, nullptr);
+
+        // 3) 从连接表移除（这一步之后 it 就无效了）
+        connections_.erase(it);
+
+        do_close_fd = true;  // 标记：锁外再 close，防止死锁/重入
+        LOG_WARN("[TimerWheel] 连接超时，关闭: fd=%d", fd);
+    }
+
+    // 4) 锁外真正关 fd
+    if(do_close_fd) close(fd);
+
+    return true;
 }
 
 
@@ -1214,6 +1245,7 @@ void Worker::handleRead(Connection& conn, bool& need_close, bool& close_after_un
         {
             conn.read_buf.insert(conn.read_buf.end(), tmp, tmp + n);
             conn.last_active_time = time(nullptr);
+            TimerWheel::instance().refreshConnection(conn.fd);   // 🟢 [接入点 2] 读到数据 → 推迟超时
         }
         else if(n == 0)
         {
@@ -1379,6 +1411,7 @@ void Worker::handleWrite(Connection& conn, bool& need_close, bool& close_after_u
         {
             conn.write_buf.erase(conn.write_buf.begin(), conn.write_buf.begin() + n);
             conn.last_active_time = time(nullptr);
+            TimerWheel::instance().refreshConnection(conn.fd);   // 🟢 [接入点 3] 写出数据 → 推迟超时
         }
         else
         {

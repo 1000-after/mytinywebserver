@@ -14,7 +14,8 @@ add_executable(TinyWebServer
     src/server.cpp
     src/worker.cpp
     src/threadpool.cpp
-    src/logger.cpp  # 🆕 日志系统
+    src/logger.cpp     # 🆕 日志系统
+    src/timer_wheel.cpp  # 🆕 时间轮超时管理
 )
 
 # 给服务器程序加线程库（多线程版本需要）

@@ -22,6 +22,11 @@ class Worker{
 
         //添加一个新连接到Worker的epoll
         void addConnection(int fd);
+
+        // 🆕 给 TimerWheel 回调调用：
+        //   如果 fd 属于这个 Worker → 安全关闭它并返回 true
+        //   否则 → 返回 false
+        bool tryCloseConnection(int fd);
     
     private:
         void loop();    // Worker 线程的主循环
