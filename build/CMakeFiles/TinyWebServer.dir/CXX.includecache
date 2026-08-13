@@ -11,6 +11,32 @@ vector
 -
 time.h
 -
+string
+-
+
+../include/logger.h
+stdio.h
+-
+stdlib.h
+-
+string.h
+-
+time.h
+-
+pthread.h
+-
+atomic
+-
+queue
+-
+mutex
+-
+condition_variable
+-
+thread
+-
+string
+-
 
 ../include/server.h
 cstdint
@@ -34,11 +60,23 @@ unordered_map
 connection.h
 ../include/connection.h
 
+/home/qianzhu/mytinywebserver/src/logger.cpp
+logger.h
+/home/qianzhu/mytinywebserver/src/logger.h
+unistd.h
+-
+sys/stat.h
+-
+cstdarg
+-
+
 /home/qianzhu/mytinywebserver/src/main.cpp
 iostream
 -
 server.h
 /home/qianzhu/mytinywebserver/src/server.h
+logger.h
+/home/qianzhu/mytinywebserver/src/logger.h
 
 /home/qianzhu/mytinywebserver/src/server.cpp
 stdio.h
@@ -65,6 +103,8 @@ threadpool.h
 /home/qianzhu/mytinywebserver/src/threadpool.h
 connection.h
 /home/qianzhu/mytinywebserver/src/connection.h
+logger.h
+/home/qianzhu/mytinywebserver/src/logger.h
 
 /home/qianzhu/mytinywebserver/src/threadpool.cpp
 stdio.h
@@ -73,6 +113,8 @@ stdlib.h
 -
 threadpool.h
 /home/qianzhu/mytinywebserver/src/threadpool.h
+logger.h
+/home/qianzhu/mytinywebserver/src/logger.h
 
 /home/qianzhu/mytinywebserver/src/worker.cpp
 stdio.h
@@ -80,6 +122,8 @@ stdio.h
 stdlib.h
 -
 string.h
+-
+string
 -
 unistd.h
 -
@@ -97,4 +141,6 @@ worker.h
 /home/qianzhu/mytinywebserver/src/worker.h
 server.h
 /home/qianzhu/mytinywebserver/src/server.h
+logger.h
+/home/qianzhu/mytinywebserver/src/logger.h
 

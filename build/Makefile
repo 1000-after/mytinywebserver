@@ -111,19 +111,6 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named tester
-
-# Build rule for target.
-tester: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 tester
-.PHONY : tester
-
-# fast build rule for target.
-tester/fast:
-	$(MAKE) -f CMakeFiles/tester.dir/build.make CMakeFiles/tester.dir/build
-.PHONY : tester/fast
-
-#=============================================================================
 # Target rules for targets named TinyWebServer
 
 # Build rule for target.
@@ -135,6 +122,33 @@ TinyWebServer: cmake_check_build_system
 TinyWebServer/fast:
 	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/build
 .PHONY : TinyWebServer/fast
+
+src/logger.o: src/logger.cpp.o
+
+.PHONY : src/logger.o
+
+# target to build an object file
+src/logger.cpp.o:
+	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/logger.cpp.o
+.PHONY : src/logger.cpp.o
+
+src/logger.i: src/logger.cpp.i
+
+.PHONY : src/logger.i
+
+# target to preprocess a source file
+src/logger.cpp.i:
+	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/logger.cpp.i
+.PHONY : src/logger.cpp.i
+
+src/logger.s: src/logger.cpp.s
+
+.PHONY : src/logger.s
+
+# target to generate assembly for a file
+src/logger.cpp.s:
+	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/logger.cpp.s
+.PHONY : src/logger.cpp.s
 
 src/main.o: src/main.cpp.o
 
@@ -189,33 +203,6 @@ src/server.s: src/server.cpp.s
 src/server.cpp.s:
 	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/server.cpp.s
 .PHONY : src/server.cpp.s
-
-src/tester.o: src/tester.cpp.o
-
-.PHONY : src/tester.o
-
-# target to build an object file
-src/tester.cpp.o:
-	$(MAKE) -f CMakeFiles/tester.dir/build.make CMakeFiles/tester.dir/src/tester.cpp.o
-.PHONY : src/tester.cpp.o
-
-src/tester.i: src/tester.cpp.i
-
-.PHONY : src/tester.i
-
-# target to preprocess a source file
-src/tester.cpp.i:
-	$(MAKE) -f CMakeFiles/tester.dir/build.make CMakeFiles/tester.dir/src/tester.cpp.i
-.PHONY : src/tester.cpp.i
-
-src/tester.s: src/tester.cpp.s
-
-.PHONY : src/tester.s
-
-# target to generate assembly for a file
-src/tester.cpp.s:
-	$(MAKE) -f CMakeFiles/tester.dir/build.make CMakeFiles/tester.dir/src/tester.cpp.s
-.PHONY : src/tester.cpp.s
 
 src/threadpool.o: src/threadpool.cpp.o
 
@@ -279,17 +266,16 @@ help:
 	@echo "... depend"
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
-	@echo "... tester"
 	@echo "... TinyWebServer"
+	@echo "... src/logger.o"
+	@echo "... src/logger.i"
+	@echo "... src/logger.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
 	@echo "... src/server.o"
 	@echo "... src/server.i"
 	@echo "... src/server.s"
-	@echo "... src/tester.o"
-	@echo "... src/tester.i"
-	@echo "... src/tester.s"
 	@echo "... src/threadpool.o"
 	@echo "... src/threadpool.i"
 	@echo "... src/threadpool.s"

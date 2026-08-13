@@ -25,8 +25,12 @@ class Worker{
     
     private:
         void loop();    // Worker 线程的主循环
-        void handleRead(Connection& conn);  // 处理读事件
-        void handleWrite(Connection& conn); // 处理写事件
+        // 🟢 handleRead/Write 不再直接 erase/close fd，只用引用返回 3 个状态：
+        //   need_close       = 子函数认为这个连接该关（erase + EPOLL_CTL_DEL）
+        //   close_after_unlock = 需要在锁释放后再 close(fd)（避免死锁/重复关）
+        //   need_erase_only  = 已 erase，但外面不需要再 EPOLL_CTL_DEL/close（完全交给 loop）
+        void handleRead(Connection& conn, bool& need_close, bool& close_after_unlock);
+        void handleWrite(Connection& conn, bool& need_close, bool& close_after_unlock);
         void checkTimeout();    // 检查超时连接
 
         int epoll_fd_;      // Worker 自己的 epoll

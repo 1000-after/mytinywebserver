@@ -1,4 +1,3 @@
 /home/qianzhu/mytinywebserver/build/CMakeFiles/rebuild_cache.dir
 /home/qianzhu/mytinywebserver/build/CMakeFiles/edit_cache.dir
-/home/qianzhu/mytinywebserver/build/CMakeFiles/tester.dir
 /home/qianzhu/mytinywebserver/build/CMakeFiles/TinyWebServer.dir

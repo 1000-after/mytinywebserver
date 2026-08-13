@@ -1,1 +1,1 @@
-/usr/bin/c++     CMakeFiles/tester.dir/src/tester.cpp.o  -o tester  -pthread 
+/usr/bin/c++   -std=gnu++11   CMakeFiles/tester.dir/src/tester.cpp.o  -o tester  -pthread 
