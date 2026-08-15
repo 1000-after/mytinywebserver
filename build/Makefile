@@ -204,6 +204,33 @@ src/server.cpp.s:
 	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/server.cpp.s
 .PHONY : src/server.cpp.s
 
+src/signal_handler.o: src/signal_handler.cpp.o
+
+.PHONY : src/signal_handler.o
+
+# target to build an object file
+src/signal_handler.cpp.o:
+	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/signal_handler.cpp.o
+.PHONY : src/signal_handler.cpp.o
+
+src/signal_handler.i: src/signal_handler.cpp.i
+
+.PHONY : src/signal_handler.i
+
+# target to preprocess a source file
+src/signal_handler.cpp.i:
+	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/signal_handler.cpp.i
+.PHONY : src/signal_handler.cpp.i
+
+src/signal_handler.s: src/signal_handler.cpp.s
+
+.PHONY : src/signal_handler.s
+
+# target to generate assembly for a file
+src/signal_handler.cpp.s:
+	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/signal_handler.cpp.s
+.PHONY : src/signal_handler.cpp.s
+
 src/threadpool.o: src/threadpool.cpp.o
 
 .PHONY : src/threadpool.o
@@ -303,6 +330,9 @@ help:
 	@echo "... src/server.o"
 	@echo "... src/server.i"
 	@echo "... src/server.s"
+	@echo "... src/signal_handler.o"
+	@echo "... src/signal_handler.i"
+	@echo "... src/signal_handler.s"
 	@echo "... src/threadpool.o"
 	@echo "... src/threadpool.i"
 	@echo "... src/threadpool.s"

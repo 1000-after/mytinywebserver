@@ -42,6 +42,12 @@ string
 cstdint
 -
 
+../include/signal_handler.h
+signal.h
+-
+atomic
+-
+
 ../include/threadpool.h
 vector
 -
@@ -78,16 +84,6 @@ unordered_map
 connection.h
 ../include/connection.h
 
-/home/qianzhu/mytinywebserver/src/logger.cpp
-logger.h
-/home/qianzhu/mytinywebserver/src/logger.h
-unistd.h
--
-sys/stat.h
--
-cstdarg
--
-
 /home/qianzhu/mytinywebserver/src/main.cpp
 iostream
 -
@@ -97,6 +93,8 @@ logger.h
 /home/qianzhu/mytinywebserver/src/logger.h
 timer_wheel.h
 /home/qianzhu/mytinywebserver/src/timer_wheel.h
+signal_handler.h
+/home/qianzhu/mytinywebserver/src/signal_handler.h
 
 /home/qianzhu/mytinywebserver/src/server.cpp
 stdio.h
@@ -127,50 +125,12 @@ logger.h
 /home/qianzhu/mytinywebserver/src/logger.h
 timer_wheel.h
 /home/qianzhu/mytinywebserver/src/timer_wheel.h
+signal_handler.h
+/home/qianzhu/mytinywebserver/src/signal_handler.h
 
-/home/qianzhu/mytinywebserver/src/threadpool.cpp
-stdio.h
+/home/qianzhu/mytinywebserver/src/signal_handler.cpp
+signal_handler.h
+/home/qianzhu/mytinywebserver/src/signal_handler.h
+pthread.h
 -
-stdlib.h
--
-threadpool.h
-/home/qianzhu/mytinywebserver/src/threadpool.h
-logger.h
-/home/qianzhu/mytinywebserver/src/logger.h
-
-/home/qianzhu/mytinywebserver/src/timer_wheel.cpp
-timer_wheel.h
-/home/qianzhu/mytinywebserver/src/timer_wheel.h
-logger.h
-/home/qianzhu/mytinywebserver/src/logger.h
-
-/home/qianzhu/mytinywebserver/src/worker.cpp
-stdio.h
--
-stdlib.h
--
-string.h
--
-string
--
-unistd.h
--
-fcntl.h
--
-errno.h
--
-sys/epoll.h
--
-sys/eventfd.h
--
-arpa/inet.h
--
-worker.h
-/home/qianzhu/mytinywebserver/src/worker.h
-server.h
-/home/qianzhu/mytinywebserver/src/server.h
-logger.h
-/home/qianzhu/mytinywebserver/src/logger.h
-timer_wheel.h
-/home/qianzhu/mytinywebserver/src/timer_wheel.h
 

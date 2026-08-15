@@ -6,16 +6,21 @@ CMakeFiles/TinyWebServer.dir/src/logger.cpp.o: ../src/logger.cpp
 
 CMakeFiles/TinyWebServer.dir/src/main.cpp.o: ../include/logger.h
 CMakeFiles/TinyWebServer.dir/src/main.cpp.o: ../include/server.h
+CMakeFiles/TinyWebServer.dir/src/main.cpp.o: ../include/signal_handler.h
 CMakeFiles/TinyWebServer.dir/src/main.cpp.o: ../include/timer_wheel.h
 CMakeFiles/TinyWebServer.dir/src/main.cpp.o: ../src/main.cpp
 
 CMakeFiles/TinyWebServer.dir/src/server.cpp.o: ../include/connection.h
 CMakeFiles/TinyWebServer.dir/src/server.cpp.o: ../include/logger.h
 CMakeFiles/TinyWebServer.dir/src/server.cpp.o: ../include/server.h
+CMakeFiles/TinyWebServer.dir/src/server.cpp.o: ../include/signal_handler.h
 CMakeFiles/TinyWebServer.dir/src/server.cpp.o: ../include/threadpool.h
 CMakeFiles/TinyWebServer.dir/src/server.cpp.o: ../include/timer_wheel.h
 CMakeFiles/TinyWebServer.dir/src/server.cpp.o: ../include/worker.h
 CMakeFiles/TinyWebServer.dir/src/server.cpp.o: ../src/server.cpp
+
+CMakeFiles/TinyWebServer.dir/src/signal_handler.cpp.o: ../include/signal_handler.h
+CMakeFiles/TinyWebServer.dir/src/signal_handler.cpp.o: ../src/signal_handler.cpp
 
 CMakeFiles/TinyWebServer.dir/src/threadpool.cpp.o: ../include/connection.h
 CMakeFiles/TinyWebServer.dir/src/threadpool.cpp.o: ../include/logger.h

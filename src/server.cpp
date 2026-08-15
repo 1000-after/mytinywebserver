@@ -2121,6 +2121,7 @@
 #include "connection.h"
 #include "logger.h"       // 🆕 引入日志系统
 #include "timer_wheel.h"    // 🆕 引入全局时间轮
+#include "signal_handler.h" // 🆕 8.0：信号处理 + 优雅关闭标志
 
 // 全局线程池指针（供主线程使用）
 static ThreadPool* g_thread_pool = nullptr;
@@ -2242,20 +2243,40 @@ void runServer6_0(uint16_t ports)
     //   1. 等待新连接
     //   2. accept 接收新连接
     //   3. 将连接分发给 Worker
+    // 🟢 8.0 改造：
+    //   - 循环条件：检测 SignalHandler::isShutdownRequested()
+    //   - epoll_wait 超时由 -1 改为 500ms
+    //     好处1：即使没有任何网络事件，每 500ms 也会醒来一次检查退出标志
+    //     好处2：Ctrl+C 发 SIGINT 会打断 epoll_wait（返回-1且errno=EINTR），马上能检测到标志
     // ====================
     epoll_event events[MAX_EVENTS];
     LOG_INFO("========================================");
-    LOG_INFO("【6.1 HTTP 版本】服务器启动");
+    LOG_INFO("【8.0 信号+优雅关闭版】服务器启动");
     LOG_INFO("端口: %d", ports);
     LOG_INFO("Worker 数量: 4");
     LOG_INFO("架构: 主 Reactor + Worker 线程池");
+    LOG_INFO("优雅关闭: 按 Ctrl+C 或 kill -15 触发");
     LOG_INFO("========================================");
 
-    while(1){
-        // 阻塞等待事件（-1 表示无限等待）
-        int nready = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
+    // 🟢 8.0【关键】解除主线程的信号阻塞
+    //   init() 中已阻塞 SIGINT/SIGTERM（Worker 线程继承阻塞，无法接收信号）
+    //   这里解除主线程阻塞 → 主线程成为唯一能接收退出信号的线程
+    //   这样 Ctrl+C/kill 会立刻打断主线程的 epoll_wait()，触发优雅关闭
+    SignalHandler::allowSignals();
 
-        if(nready < 0) continue;
+    // 🟢 8.0：只要没请求关闭就继续循环
+    while(!SignalHandler::isShutdownRequested()){
+        // 🟢 8.0：超时改为 500ms，不再死等 -1
+        //   - 有事件 → 立刻返回处理
+        //   - 无事件 → 500ms 后自动醒来检查 isShutdownRequested
+        //   - 被信号打断 → 返回 -1 且 errno==EINTR，下一轮 while 立刻检测标志
+        int nready = epoll_wait(epoll_fd, events, MAX_EVENTS, 500);
+
+        // 🟢 8.0：EINTR 是 Ctrl+C/kill 正常打断，不算错误，continue 让 while 立即重判标志
+        if(nready < 0) {
+            if(errno == EINTR) continue;  // 被信号打断：正常情况，不打日志
+            continue;                     // 其他错误：忽略，继续下一轮
+        }
 
 
         // 遍历所有就绪事件
@@ -2306,12 +2327,38 @@ void runServer6_0(uint16_t ports)
     }
 
     // ====================
-    // 清理资源（理论上不会走到这里）
+    // 🟢 8.0：优雅关闭流程（按 Ctrl+C / kill -15 后会走到这里）
+    // 顺序非常重要！必须严格按下面顺序来：
+    //   Step 1：关闭监听 sockfd → 端口释放，不再接受新连接
+    //   Step 2：停线程池 → Worker 的 running_=false，Worker 逐个 close 自己手里的连接 + join 等待线程退出
+    //   Step 3：delete 线程池 → 释放 Worker 对象内存
+    //   Step 4：关闭主线程的 epoll
     // ====================
-    LOG_INFO("服务器关闭...");
-    g_thread_pool->stop();  // 停止线程池
-    delete g_thread_pool;   // 释放线程池内存
+    LOG_WARN("========================================");
+    LOG_WARN("【优雅关闭】收到退出信号，开始关停流程");
+    LOG_WARN("Step 1/4: 关闭监听 socket，不再接受新连接");
+    LOG_WARN("========================================");
+
+    // Step 1：关闭监听 fd（端口立刻释放，新连接连不上了）
+    //        注意：必须放在最前面，防止关停过程中还在 accept 新连接
+    close(sockfd);
+
+    LOG_WARN("Step 2/4: 停止线程池（Worker 正在清理剩余连接，请稍候...）");
+    // Step 2：停止所有 Worker
+    //        Worker::stop() 会先 running_=false，然后 thread_.join() 等线程真正结束
+    //        Worker 线程的 loop() 退出前会遍历 connections_ 逐个 close fd（在 worker.cpp:1151）
+    g_thread_pool->stop();
+
+    LOG_WARN("Step 3/4: 释放线程池内存");
+    // Step 3：delete ThreadPool 对象（内部会 delete 每个 Worker）
+    delete g_thread_pool;
     g_thread_pool = nullptr;
-    close(epoll_fd);    // 关闭 epoll
-    close(sockfd);  // 关闭监听 socket
+
+    LOG_WARN("Step 4/4: 关闭主线程 epoll");
+    // Step 4：关闭主线程的 epoll 句柄
+    close(epoll_fd);
+
+    LOG_WARN("========================================");
+    LOG_WARN("【优雅关闭】服务器已安全退出 ✓");
+    LOG_WARN("========================================");
 }

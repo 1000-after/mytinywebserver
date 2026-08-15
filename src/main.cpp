@@ -38,8 +38,16 @@
 #include "server.h"
 #include "logger.h"       // 🆕 引入日志系统
 #include "timer_wheel.h"    // 🆕 引入全局时间轮
+#include "signal_handler.h" // 🆕 8.0：信号处理 + 优雅关闭
 
 int main() {
+    // 🟢 8.0【必须放在最前面！】初始化信号处理器
+    //   - 忽略 SIGPIPE（防止写已断开的 socket 时进程被内核杀掉）
+    //   - 捕获 SIGINT(Ctrl+C) / SIGTERM(kill 默认发送)，设置优雅关闭标志
+    //   必须在创建线程、开监听、初始化日志之前调用！
+    //   这样即使初始化过程中用户按 Ctrl+C，信号也能被正确捕获
+    SignalHandler::init();
+
     // 🆕 初始化日志系统
     LogConfig log_config;
     log_config.level = LOG_WARN;       // INFO 及以上级别
