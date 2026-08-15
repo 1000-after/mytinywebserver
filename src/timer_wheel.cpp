@@ -12,9 +12,10 @@ TimerWheel& TimerWheel::instance()
 }
 
 // ==================== 构造/析构 ====================
-TimerWheel::TimerWheel(): current_slot_(0)
+// 9.2 改造：构造函数不再 resize（槽位数初始化挪到 init 里，由配置决定）
+TimerWheel::TimerWheel(): current_slot_(0), slot_count_(15)
 {
-    slots_.resize(SLOT_COUNT);
+    // 默认 15，真正的值在 init() 里用配置覆盖
 }
 
 TimerWheel::~TimerWheel()
@@ -23,14 +24,20 @@ TimerWheel::~TimerWheel()
 }
 
 // ==================== init / shutdown ====================
-void TimerWheel::init()
+// 9.2 改造：接收 slot_count 参数，由 main.cpp 从配置 server.timeout 读进来
+void TimerWheel::init(int slot_count)
 {
     if(running_.load()) return; // 已经初始化过就直接返回（幂等）
+
+    // 防御性检查：槽位数至少 1（避免配置写成 0 或负数导致 resize 异常）
+    if(slot_count < 1) slot_count = 15;
+    slot_count_ = slot_count;
+    slots_.resize(slot_count_);  // 根据配置分配槽位数
 
     running_ = true;
     tick_thread_ = std::thread(&TimerWheel::tickThread, this);
     LOG_INFO("TimerWheel: 初始化完成，%d 个槽位（%d 秒超时），后台滴答线程已启动",
-            SLOT_COUNT, SLOT_COUNT);
+            slot_count_, slot_count_);
 }
 
 void TimerWheel::shutdown()
@@ -73,7 +80,7 @@ void TimerWheel::removeFromSlotLocked(int fd)
     if(it == fd_to_slot_.end()) return;     // 找不到就跳过（可能超时后已经被 tick 清过了）
 
     int slot_idx = it->second;
-    if(slot_idx >= 0 && slot_idx < SLOT_COUNT)
+    if(slot_idx >= 0 && slot_idx < slot_count_)
     {
         slots_[slot_idx].erase(fd);     // 从槽位的 set 里删掉
     }
@@ -142,7 +149,7 @@ void TimerWheel::tickThread()
         // ┌──────────────────────────────────────────────────┐
         // │ 要点 2：指针前进一格（取模 15 循环）               │
         // └──────────────────────────────────────────────────┘
-        current_slot_ = (current_slot_ + 1) % SLOT_COUNT;
+        current_slot_ = (current_slot_ + 1) % slot_count_;
 
         // ┌──────────────────────────────────────────────────┐
         // │ 要点 3：用 std::move 把过期 fd 的 set 拿走         │
@@ -176,7 +183,7 @@ void TimerWheel::tickThread()
         {
             for(int fd : expired)
             {
-                LOG_DEBUG("TimerWheel: fd=%d 超时（%d 秒无活动）", fd, SLOT_COUNT);
+                LOG_DEBUG("TimerWheel: fd=%d 超时（%d 秒无活动）", fd, slot_count_);
                 cb(fd);
                 ++timeout_count;
             }

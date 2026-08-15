@@ -6,6 +6,12 @@
 
 #IncludeRegexTransform: 
 
+../include/config.h
+string
+-
+unordered_map
+-
+
 ../include/connection.h
 vector
 -
@@ -84,18 +90,6 @@ unordered_map
 connection.h
 ../include/connection.h
 
-/home/qianzhu/mytinywebserver/src/main.cpp
-iostream
--
-server.h
-/home/qianzhu/mytinywebserver/src/server.h
-logger.h
-/home/qianzhu/mytinywebserver/src/logger.h
-timer_wheel.h
-/home/qianzhu/mytinywebserver/src/timer_wheel.h
-signal_handler.h
-/home/qianzhu/mytinywebserver/src/signal_handler.h
-
 /home/qianzhu/mytinywebserver/src/server.cpp
 stdio.h
 -
@@ -121,16 +115,12 @@ threadpool.h
 /home/qianzhu/mytinywebserver/src/threadpool.h
 connection.h
 /home/qianzhu/mytinywebserver/src/connection.h
+config.h
+/home/qianzhu/mytinywebserver/src/config.h
 logger.h
 /home/qianzhu/mytinywebserver/src/logger.h
 timer_wheel.h
 /home/qianzhu/mytinywebserver/src/timer_wheel.h
 signal_handler.h
 /home/qianzhu/mytinywebserver/src/signal_handler.h
-
-/home/qianzhu/mytinywebserver/src/signal_handler.cpp
-signal_handler.h
-/home/qianzhu/mytinywebserver/src/signal_handler.h
-pthread.h
--
 

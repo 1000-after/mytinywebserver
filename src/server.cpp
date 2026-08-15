@@ -2119,6 +2119,7 @@
 #include "server.h"
 #include "threadpool.h"
 #include "connection.h"
+#include "config.h"         // 🆕 9.2：配置中心
 #include "logger.h"       // 🆕 引入日志系统
 #include "timer_wheel.h"    // 🆕 引入全局时间轮
 #include "signal_handler.h" // 🆕 8.0：信号处理 + 优雅关闭标志
@@ -2189,9 +2190,10 @@ void runServer6_0(uint16_t ports)
     }
 
     // ====================
-    // 第3步：开始监听
+    // 第3步：开始监听（9.2 改造：backlog 从配置文件读，默认 1024）
     // ====================
-    if(listen(sockfd, 1024) < 0)
+    int backlog = Config::instance().getInt("server.backlog", 1024);
+    if(listen(sockfd, backlog) < 0)
     {
         perror("listen 监听失败");
         close(sockfd);
@@ -2219,9 +2221,10 @@ void runServer6_0(uint16_t ports)
     epoll_ctl(epoll_fd, EPOLL_CTL_ADD, sockfd, &listen_ev);
 
     // ====================
-    // 第6步：创建并启动线程池
+    // 第6步：创建并启动线程池（9.2 改造：线程数从配置文件读，默认4）
     // ====================
-    g_thread_pool = new ThreadPool(4);  // 创建 4 个 Worker
+    int threads = Config::instance().getInt("performance.threads", 4);
+    g_thread_pool = new ThreadPool(threads);  // 创建 N 个 Worker（N 来自配置，默认4）
     g_thread_pool->start();     // 启动所有 Worker
 
     // ====================
@@ -2253,7 +2256,7 @@ void runServer6_0(uint16_t ports)
     LOG_INFO("========================================");
     LOG_INFO("【8.0 信号+优雅关闭版】服务器启动");
     LOG_INFO("端口: %d", ports);
-    LOG_INFO("Worker 数量: 4");
+    LOG_INFO("Worker 数量: %d", threads);
     LOG_INFO("架构: 主 Reactor + Worker 线程池");
     LOG_INFO("优雅关闭: 按 Ctrl+C 或 kill -15 触发");
     LOG_INFO("========================================");

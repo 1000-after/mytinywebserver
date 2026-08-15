@@ -27,7 +27,9 @@ class TimerWheel{
         TimerWheel& operator=(const TimerWheel&) = delete;
 
         // ===== 启动/停止后台滴答线程 =====
-        void init();
+        // slot_count: 槽位数 = 超时秒数（从配置 server.timeout 读）
+        //              默认 15，和原硬编码保持一致
+        void init(int slot_count = 15);
         void shutdown();
 
         // ===== 3 个核心对外操作（线程安全，内部加锁）=====
@@ -43,8 +45,8 @@ class TimerWheel{
         TimerWheel();
         ~TimerWheel();
 
-        // ===== 常量 =====
-        static const int SLOT_COUNT = 15;   // 槽位数 = 超时秒数（15 秒）
+        // ===== 配置（9.2 改造：从编译期常量改为运行时可配）=====
+        int slot_count_;   // 槽位数 = 超时秒数（由 init() 参数决定）
 
 
         // ===== 数据结构 =====
