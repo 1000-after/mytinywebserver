@@ -1,5 +1,6 @@
 file(REMOVE_RECURSE
   "CMakeFiles/TinyWebServer.dir/src/config.cpp.o"
+  "CMakeFiles/TinyWebServer.dir/src/connection_pool.cpp.o"
   "CMakeFiles/TinyWebServer.dir/src/logger.cpp.o"
   "CMakeFiles/TinyWebServer.dir/src/main.cpp.o"
   "CMakeFiles/TinyWebServer.dir/src/server.cpp.o"

@@ -10,7 +10,7 @@
 #include "worker.h"     // Worker 类
 class ThreadPool{
     public:
-        ThreadPool(int num_threads = 4);    //析构函数，指定线程数
+        ThreadPool(int num_threads = 4);    //构造函数，指定线程数
         ~ThreadPool();          // 析构函数
 
         void start();            // 启动所有 Worker

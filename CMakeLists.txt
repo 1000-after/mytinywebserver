@@ -18,6 +18,7 @@ add_executable(TinyWebServer
     src/timer_wheel.cpp  # 🆕 时间轮超时管理
     src/signal_handler.cpp  # 🆕 8.0：信号处理 + 优雅关闭
     src/config.cpp          # 🆕 9.2：配置中心
+    src/connection_pool.cpp # 🆕 9.0：连接池（预分配 Connection 对象，消灭频繁 malloc/free）
 )
 
 # 给服务器程序加线程库（多线程版本需要）

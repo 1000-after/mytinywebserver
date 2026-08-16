@@ -2254,11 +2254,14 @@ void runServer6_0(uint16_t ports)
     // ====================
     epoll_event events[MAX_EVENTS];
     LOG_INFO("========================================");
-    LOG_INFO("【8.0 信号+优雅关闭版】服务器启动");
+    LOG_INFO("【9.0 连接池版】服务器启动");
     LOG_INFO("端口: %d", ports);
     LOG_INFO("Worker 数量: %d", threads);
-    LOG_INFO("架构: 主 Reactor + Worker 线程池");
+    LOG_INFO("架构: 主 Reactor + Worker 线程池（每个 Worker 自带分片连接池）");
     LOG_INFO("优雅关闭: 按 Ctrl+C 或 kill -15 触发");
+    LOG_INFO("连接池: 每个 Worker 预分配 %d 个 Connection（buffer reserve=%d B），从池 acquire/release",
+             Config::instance().getInt("server.max_connections", 1000) / (threads > 0 ? threads : 1),
+             Config::instance().getInt("pool.reserve_bytes", 8192));
     LOG_INFO("========================================");
 
     // 🟢 8.0【关键】解除主线程的信号阻塞

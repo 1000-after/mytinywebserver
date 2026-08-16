@@ -957,11 +957,13 @@
 #include "server.h"
 #include "logger.h"      // 🆕 引入日志系统
 #include "timer_wheel.h"   // 🆕 引入全局时间轮（连接超时管理）
+#include "config.h"        // 🆕 9.0：读取连接池配置参数
 
 // ==================== 构造函数 ====================
 Worker::Worker():epoll_fd_(-1), // 初始化 epoll 为 -1（表示无效）
     notify_fd_(-1),// 初始化通知 fd 为 -1
-    running_(false)// 初始状态为未运行
+    running_(false),// 初始状态为未运行
+    conn_pool_(nullptr)   // 🆕 9.0：连接池延迟到 start() 中初始化
 {
 
 }
@@ -971,6 +973,13 @@ Worker::Worker():epoll_fd_(-1), // 初始化 epoll 为 -1（表示无效）
 Worker::~Worker()
 {
     stop();     // 确保 Worker 已停止，避免资源泄漏
+
+    // 🆕 9.0：stop() 已把所有在用连接 release 回池，这里 delete 池子本身
+    //        连接池析构会把空闲队列中的对象真正 delete 给 OS
+    if (conn_pool_ != nullptr) {
+        delete conn_pool_;
+        conn_pool_ = nullptr;
+    }
 }
 
 // ==================== 启动 Worker ====================
@@ -1001,6 +1010,21 @@ void Worker::start()
     ev.events = EPOLLIN | EPOLLET;  // 监听可读事件 + ET 边缘触发模式
     ev.data.fd = notify_fd_;        // 存储 fd 标识
     epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, notify_fd_, &ev);
+
+    // 🆕 9.0：3.5 创建本 Worker 独立的连接池（分片）
+    //   每个 Worker 各有各的池子，减少跨线程锁竞争
+    //   预分配数量 = max_connections / Worker 数（均分），保底 64 个
+    {
+        int max_conns = Config::instance().getInt("server.max_connections", 1000);
+        int workers   = Config::instance().getInt("performance.threads", 4);
+        size_t init_cnt = (size_t)(max_conns / (workers > 0 ? workers : 1));
+        if (init_cnt < 64)  init_cnt = 64;              // 保底 64 个
+        size_t buf_sz   = (size_t)Config::instance().getInt("pool.reserve_bytes", 8192);
+        size_t max_cnt  = (size_t)(max_conns * 2);      // 上限 = 最大连接数 ×2（留余量）
+        conn_pool_ = new ConnectionPool(init_cnt, buf_sz, max_cnt);
+    }
+    LOG_INFO("Worker 连接池就绪，空闲=%zu，累计=%zu",
+             conn_pool_->freeCount(), conn_pool_->totalCount());
 
     // 4. 标记运行状态
     running_ = true;
@@ -1041,6 +1065,23 @@ void Worker::stop(){
     }
 
     printf("Worker 已停止\n");
+
+    // 🆕 9.0：stop 收尾——把所有仍在 connections_ 里的在用连接 release 回池
+    //   注意：这里运行顺序是「running_=false → join 等线程退出 → 关 epoll/notify_fd → 执行本清理」
+    //        所以此时已经没有并发访问，不需要加 mutex_
+    if (conn_pool_ != nullptr) {
+        for (auto it = connections_.begin(); it != connections_.end(); ) {
+            Connection* c = it->second;
+            // 从 epoll 移除（虽然 epoll_fd_ 已经 close 了，保险起见）
+            // if (epoll_fd_ >= 0) epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, it->first, nullptr);
+            // 关闭 socket fd
+            close(it->first);
+            // release 回池（close(fd) 后归还——池子不负责关 fd）
+            conn_pool_->release(c);
+            // 从哈希表移除（注意 release 没有析构 c，只是放回池子）
+            it = connections_.erase(it);
+        }
+    }
 }
 
 // ==================== 主循环（工作线程执行）====================
@@ -1103,7 +1144,8 @@ void Worker::loop()
                 if(ev & EPOLLOUT)
                 {
                     bool nc = false, cau = false;
-                    handleWrite(it->second, nc, cau);
+                    // 🆕 9.0：it->second 现在是 Connection*，要解引用传引用
+                    handleWrite(*(it->second), nc, cau);
                     if(nc)  need_close = true;
                     if(cau) close_after_unlock = true;
                 }
@@ -1115,7 +1157,8 @@ void Worker::loop()
                     if(it2 != connections_.end())
                     {
                         bool nc = false, cau = false;
-                        handleRead(it2->second, nc, cau);
+                        // 🆕 9.0：同样解引用
+                        handleRead(*(it2->second), nc, cau);
                         if(nc)  need_close = true;
                         if(cau) close_after_unlock = true;
                     }
@@ -1129,7 +1172,16 @@ void Worker::loop()
                     {
                         TimerWheel::instance().removeConnection(fd);   // 🟢 [接入点 4] 主动关 → 从时间轮移除
                         epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, nullptr);
+
+                        // 🆕 9.0：先拿 Connection* 指针再 erase
+                        Connection* c = it3->second;
                         connections_.erase(it3);
+                        // release 回池（只清脏数据，不析构不释放底层内存）
+                        if (conn_pool_ != nullptr) {
+                            conn_pool_->release(c);
+                        } else {
+                            delete c;
+                        }
                     }
                 }
             }   // 🔓 锁在这里释放
@@ -1153,8 +1205,15 @@ void Worker::loop()
         TimerWheel::instance().removeConnection(pair.first);   // 🟢 [接入点 6] 退出时批量从时间轮移除
         epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, pair.first, nullptr);
         close(pair.first);
+        // 🆕 9.0：对象从池子来的，关完 fd 后 release 回池
+        if (conn_pool_ != nullptr) {
+            conn_pool_->release(pair.second);
+        } else {
+            // 兜底：如果池子没初始化（极端情况），直接 delete 防泄漏
+            delete pair.second;
+        }
     }
-    connections_.clear();       // 清空连接表
+    connections_.clear();       // 清空连接表（此时 value 都是已经 release 的悬空指针，但 map 自己不管对象）
     printf("Worker 主循环退出\n");
 }
 
@@ -1166,13 +1225,14 @@ void Worker::addConnection(int fd)
     {
         std::lock_guard<std::mutex> lock(mutex_);  // 加锁
 
-        // 1. 创建连接对象
-        Connection conn;
-        conn.fd = fd;
-        conn.last_active_time = time(nullptr);
+        // 🆕 9.0：1. 从连接池 acquire 一个预分配好的对象（不再在栈上创建+拷贝）
+        //        从池里拿出来的对象：read_buf/write_buf 已经 reserve(8KB)，http_method/path 也已预留
+        Connection* c = conn_pool_->acquire();
+        c->fd = fd;
+        c->last_active_time = time(nullptr);
 
-        // 2. 加入连接表
-        connections_[fd] = conn;
+        // 2. 加入连接表（存指针，不再存对象副本）
+        connections_[fd] = c;
 
         // 3. 设置非阻塞（ET 模式必须用非阻塞 socket）
         setnonblocking(fd);
@@ -1193,7 +1253,8 @@ void Worker::addConnection(int fd)
     uint64_t notify_val = 1;
     write(notify_fd_, &notify_val, sizeof(notify_val));
 
-    LOG_INFO("Worker 收到新连接: fd=%d", fd);
+    LOG_INFO("Worker 收到新连接: fd=%d, pool_free=%zu", fd,
+             conn_pool_ ? conn_pool_->freeCount() : 0);
 }
 
 // ==================== 🆕 TimerWheel 回调：尝试关闭连接 ====================
@@ -1216,8 +1277,19 @@ bool Worker::tryCloseConnection(int fd)
         // 2) 从 epoll 移除
         epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, nullptr);
 
-        // 3) 从连接表移除（这一步之后 it 就无效了）
+    // 🆕 9.0：2.5 先取出 Connection* 指针，erase(it) 后指针仍有效（自己 new 出来的不在 map 里）
+        Connection* c = it->second;
+
+        // 3) 从连接表移除（这一步之后 it 就无效了，但 c 指针还有效）
         connections_.erase(it);
+
+        // 🆕 9.0：3.5 release 回池（不析构不 delete，只是清脏数据塞回空闲队列）
+        //        注意：必须先从 map 里拿出来 c，再 erase，再 release
+        if (conn_pool_ != nullptr) {
+            conn_pool_->release(c);
+        } else {
+            delete c;   // 兜底
+        }
 
         do_close_fd = true;  // 标记：锁外再 close，防止死锁/重入
         LOG_WARN("[TimerWheel] 连接超时，关闭: fd=%d", fd);
@@ -1449,15 +1521,24 @@ void Worker::checkTimeout()
     auto it = connections_.begin();
     while(it != connections_.end())
     {
+        // 🆕 9.0：it->second 现在是 Connection* 指针，访问成员用 ->
         // 判断：当前时间 - 最后活跃时间 > 超时时间
-        if(now - it->second.last_active_time > IDLE_TIMEOUT){
+        if(now - it->second->last_active_time > IDLE_TIMEOUT){
             printf("连接超时踢出: fd=%d\n", it->first);
             // 从 epoll 中移除监听
             epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, it->first, nullptr);
             //关闭文件描述符
             close(it->first);
+            // 🆕 9.0：取出 Connection* 指针，erase 后 release 回池（防泄漏）
+            Connection* c = it->second;
             // 从连接表删除（erase 返回下一个有效迭代器）
             it = connections_.erase(it);
+            // 归还给连接池（只清脏数据不释放内存，下次复用）
+            if (conn_pool_ != nullptr) {
+                conn_pool_->release(c);
+            } else {
+                delete c;   // 兜底
+            }
         }else{
             // 未超时，继续检查下一个
             ++it;

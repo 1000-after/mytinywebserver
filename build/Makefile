@@ -150,6 +150,33 @@ src/config.cpp.s:
 	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/config.cpp.s
 .PHONY : src/config.cpp.s
 
+src/connection_pool.o: src/connection_pool.cpp.o
+
+.PHONY : src/connection_pool.o
+
+# target to build an object file
+src/connection_pool.cpp.o:
+	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/connection_pool.cpp.o
+.PHONY : src/connection_pool.cpp.o
+
+src/connection_pool.i: src/connection_pool.cpp.i
+
+.PHONY : src/connection_pool.i
+
+# target to preprocess a source file
+src/connection_pool.cpp.i:
+	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/connection_pool.cpp.i
+.PHONY : src/connection_pool.cpp.i
+
+src/connection_pool.s: src/connection_pool.cpp.s
+
+.PHONY : src/connection_pool.s
+
+# target to generate assembly for a file
+src/connection_pool.cpp.s:
+	$(MAKE) -f CMakeFiles/TinyWebServer.dir/build.make CMakeFiles/TinyWebServer.dir/src/connection_pool.cpp.s
+.PHONY : src/connection_pool.cpp.s
+
 src/logger.o: src/logger.cpp.o
 
 .PHONY : src/logger.o
@@ -351,6 +378,9 @@ help:
 	@echo "... src/config.o"
 	@echo "... src/config.i"
 	@echo "... src/config.s"
+	@echo "... src/connection_pool.o"
+	@echo "... src/connection_pool.i"
+	@echo "... src/connection_pool.s"
 	@echo "... src/logger.o"
 	@echo "... src/logger.i"
 	@echo "... src/logger.s"

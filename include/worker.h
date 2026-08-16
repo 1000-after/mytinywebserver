@@ -9,7 +9,8 @@
 #include <mutex>        // 互斥锁
 #include <unordered_map>   // 哈希表
 
-#include "connection.h" // Connection 结构体
+#include "connection.h"       // Connection 结构体
+#include "connection_pool.h"  // 🆕 9.0：连接池（预分配 Connection 对象）
 
 class Worker{
 
@@ -44,8 +45,17 @@ class Worker{
         bool running_;          // 运行标志
         std::mutex mutex_;        // 互斥锁（保护 connections_）
 
-        // 连接表（fd -> Connection）
-        std::unordered_map<int, Connection> connections_;
+        // 连接池（9.0 新增）
+        // 每个 Worker 独立持有自己的池子（分片），减少跨线程锁竞争
+        // 指针而非对象：因为构造函数里要先拿配置参数（pool_init_count 等）再 init，
+        // 所以延迟到 Worker::start() 里 new
+        ConnectionPool* conn_pool_;
+
+        // 连接表（fd -> Connection*）
+        // 🆕 9.0 改造：value 从 Connection 对象改成指针
+        //   - 指针来自 conn_pool_->acquire()，用完归还 conn_pool_->release()
+        //   - unordered_map 自己不再管理 Connection 的构造/析构，交给池子
+        std::unordered_map<int, Connection*> connections_;
 };
 
 #endif
