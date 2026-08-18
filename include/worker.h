@@ -11,6 +11,7 @@
 
 #include "connection.h"       // Connection 结构体
 #include "connection_pool.h"  // 🆕 9.0：连接池（预分配 Connection 对象）
+#include "timer_wheel.h"      // 🆕 局部时间轮（每个 Worker 独立实例）
 
 class Worker{
 
@@ -24,11 +25,9 @@ class Worker{
         //添加一个新连接到Worker的epoll
         void addConnection(int fd);
 
-        // 🆕 给 TimerWheel 回调调用：
-        //   如果 fd 属于这个 Worker → 安全关闭它并返回 true
-        //   否则 → 返回 false
-        bool tryCloseConnection(int fd);
-    
+        // 🆕 10.0：局部时间轮超时关闭（由 loop() 中 tick() 驱动）
+        void tryCloseTimeoutConnection(int fd);
+
     private:
         void loop();    // Worker 线程的主循环
         // 🟢 handleRead/Write 不再直接 erase/close fd，只用引用返回 3 个状态：
@@ -37,7 +36,6 @@ class Worker{
         //   need_erase_only  = 已 erase，但外面不需要再 EPOLL_CTL_DEL/close（完全交给 loop）
         void handleRead(Connection& conn, bool& need_close, bool& close_after_unlock);
         void handleWrite(Connection& conn, bool& need_close, bool& close_after_unlock);
-        void checkTimeout();    // 检查超时连接
 
         int epoll_fd_;      // Worker 自己的 epoll
         int notify_fd_;     // 通知 fd（eventfd）
@@ -50,6 +48,12 @@ class Worker{
         // 指针而非对象：因为构造函数里要先拿配置参数（pool_init_count 等）再 init，
         // 所以延迟到 Worker::start() 里 new
         ConnectionPool* conn_pool_;
+
+        // 🆕 局部时间轮（10.0 新增）
+        // 每个 Worker 独立持有一个时间轮实例，彻底消除全局锁竞争
+        // tick() 在 Worker::loop() 中定期调用，返回过期 fd 列表
+        // 所有操作由 Worker::mutex_ 保护（addConnection 来自主线程，其他来自 Worker 线程）
+        TimerWheel timer_wheel_;
 
         // 连接表（fd -> Connection*）
         // 🆕 9.0 改造：value 从 Connection 对象改成指针

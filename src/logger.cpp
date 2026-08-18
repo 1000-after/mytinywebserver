@@ -76,6 +76,13 @@ void Logger::setLevel(LogLevel level) {
 
 // ==================== 核心：写入日志（立即返回）====================
 void Logger::log(LogLevel level, const char* file, int line, const char* fmt, ...) {
+    // 🆕 检查日志系统是否正在运行（防止 shutdown 后还 push 日志，导致 join 卡死）
+    if(!running_.load(std::memory_order_acquire)) return;
+
+
+    // 🆕 检查日志系统是否正在运行（防止 shutdown 后还 push 日志，导致 join 卡死）
+    if(!running_.load(std::memory_order_acquire)) return;
+    
     // 检查日志级别
     if(level < config_.level) return;              // 低于设定级别的日志直接丢弃，零开销过滤
     

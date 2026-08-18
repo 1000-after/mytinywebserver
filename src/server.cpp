@@ -2121,7 +2121,6 @@
 #include "connection.h"
 #include "config.h"         // 🆕 9.2：配置中心
 #include "logger.h"       // 🆕 引入日志系统
-#include "timer_wheel.h"    // 🆕 引入全局时间轮
 #include "signal_handler.h" // 🆕 8.0：信号处理 + 优雅关闭标志
 
 // 全局线程池指针（供主线程使用）
@@ -2227,18 +2226,9 @@ void runServer6_0(uint16_t ports)
     g_thread_pool = new ThreadPool(threads);  // 创建 N 个 Worker（N 来自配置，默认4）
     g_thread_pool->start();     // 启动所有 Worker
 
-    // ====================
-    // 🆕 注册时间轮超时回调
-    //   说明：TimerWheel 滴答线程每秒扫一次槽
-    //   发现 15 秒没动过的 fd，就回调这个 lambda
-    //   回调里让线程池把 fd 路由到持有它的 Worker，由 Worker 安全地 erase+close
-    // ====================
-    TimerWheel::instance().setCallback([](int fd) {
-        if(g_thread_pool != nullptr) {
-            g_thread_pool->tryCloseConnectionOnAnyWorker(fd);
-        }
-    });
-    LOG_INFO("TimerWheel: 超时回调已注册（15s 无数据自动关连接）");
+    // 🆕 10.0：局部时间轮已在 Worker::start() 中初始化
+    //   超时回调由每个 Worker 的 loop() 中的 tick() 直接驱动
+    LOG_INFO("Worker 线程池已启动，局部时间轮（10.0 版）已就绪");
 
     // ====================
     // 第7步：主事件循环（Reactor 模式）

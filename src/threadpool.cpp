@@ -205,19 +205,6 @@ void ThreadPool::distributeConnection(int fd){
     LOG_DEBUG("连接 fd=%d 分配给 Worker[%d]", fd, target_index);
 }
 
-// ==================== 🆕 TimerWheel 回调：跨 Worker 关超时连接 ====================
-// 说明：时间轮只知道一个 fd 超时了，但不知道它归哪个 Worker 管
-//       这里逐个 Worker 尝试：tryCloseConnection 内部会先在 connections_ 里查找
-//       找不到就返回 false，找到就真关并返回 true
-bool ThreadPool::tryCloseConnectionOnAnyWorker(int fd)
-{
-    for(Worker* w : workers_)
-    {
-        if(w->tryCloseConnection(fd)) return true;
-    }
-    return false;
-}
-
 
 // ==================== 示例：Round-Robin 工作原理 ====================
 //假设有 3 个 Worker：W[0], W[1], W[2]

@@ -37,7 +37,6 @@
 #include <iostream>
 #include "server.h"
 #include "logger.h"       // 🆕 引入日志系统
-#include "timer_wheel.h"    // 🆕 引入全局时间轮
 #include "signal_handler.h" // 🆕 8.0：信号处理 + 优雅关闭
 #include "config.h"         // 🆕 9.2：配置中心
 
@@ -76,9 +75,8 @@ int main() {
     log_config.max_file_size = Config::instance().getInt("log.max_size", 100 * 1024 * 1024);
     Logger::instance().init(log_config);
 
-    // 🆕 初始化全局时间轮（9.2 改造：超时秒数从配置 server.timeout 读，默认 15）
-    int timeout = Config::instance().getInt("server.timeout", 15);
-    TimerWheel::instance().init(timeout);
+    // 🆕 10.0：全局时间轮已改为局部时间轮（每个 Worker 独立实例）
+    //   不再需要在此处 init/shutdown，由 Worker::start()/析构自动管理
 
     LOG_INFO("========================================");
     LOG_INFO("  TinyWebServer 学习项目 - 6.1 HTTP版");
@@ -90,9 +88,6 @@ int main() {
     // 选择服务器版本
     // runServer(8080);      // 5.0 版本：单 Reactor
     runServer6_0(port);     // 6.0 版本：多 Reactor + 线程池（端口从配置读）
-
-    // 🆕 关闭全局时间轮（先停滴答线程，再停日志）
-    TimerWheel::instance().shutdown();
 
     // 关闭日志系统
     Logger::instance().shutdown();
